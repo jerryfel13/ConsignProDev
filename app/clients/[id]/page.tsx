@@ -8,6 +8,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { ClientItemsTabs } from "@/components/client-items-tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical } from "lucide-react";
 
 interface Client {
   id: string;
@@ -124,65 +134,69 @@ export default function ClientViewPage() {
             </Link>
           </Button>
           <h1 className="text-3xl font-bold">{client.name}</h1>
+          <Badge variant={client.status === "Active" ? "default" : "secondary"}>
+            {client.status}
+          </Badge>
         </div>
-        <div className="space-x-2">
-          <Button asChild>
-            <Link href={`/clients/${client.id}/edit`}>Edit Profile</Link>
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => {
-              // TODO: Implement deactivate functionality
-              console.log("Deactivate client:", client.id);
-            }}
-          >
-            Deactivate Client
-          </Button>
+        <div className="flex items-center space-x-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <MoreVertical className="h-4 w-4" />
+                <span className="sr-only">Actions</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => navigator.clipboard.writeText(client.id)}
+              >
+                Copy client ID
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href={`/clients/${client.id}/items/new`}>Add Item</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={`/clients/${client.id}/edit`}>Edit Profile</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={`/clients/${client.id}/transactions`}>
+                  View Transactions
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={`/clients/${client.id}/consignments`}>
+                  View Consignments
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => {
+                  // TODO: Implement deactivate functionality
+                  console.log("Deactivate client:", client.id);
+                }}
+              >
+                Deactivate Client
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-4">
+      <Tabs defaultValue="items" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="items">Items</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="consignments">Consignments</TabsTrigger>
+          <TabsTrigger value="details">Details</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="profile">
-          <Card>
-            <CardHeader>
-              <CardTitle>Client Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p>{client.email}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Phone</p>
-                  <p>{client.phone}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Address</p>
-                  <p>{client.address}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <Badge
-                    variant={
-                      client.status === "Active" ? "default" : "secondary"
-                    }
-                  >
-                    {client.status}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="items" className="mt-4">
+          <ClientItemsTabs clientId={client.id} clientName={client.name} />
         </TabsContent>
 
-        <TabsContent value="transactions">
+        <TabsContent value="transactions" className="mt-4">
           <Card>
             <CardHeader>
               <CardTitle>Transaction History</CardTitle>
@@ -226,14 +240,35 @@ export default function ClientViewPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="consignments">
+        <TabsContent value="details" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Consignments</CardTitle>
+              <CardTitle>Client Information</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-center text-muted-foreground">
-                No consignments found
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Email</p>
+                  <p>{client.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Phone</p>
+                  <p>{client.phone}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Address</p>
+                  <p>{client.address}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <Badge
+                    variant={
+                      client.status === "Active" ? "default" : "secondary"
+                    }
+                  >
+                    {client.status}
+                  </Badge>
+                </div>
               </div>
             </CardContent>
           </Card>

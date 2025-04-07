@@ -191,6 +191,7 @@ const columns: ColumnDef<Item>[] = [
 interface ItemsTableProps {
   initialFilter?: {
     status?: "Active" | "Archived" | "Returned";
+    clientName?: string;
   };
 }
 
@@ -203,10 +204,16 @@ export function ItemsTable({ initialFilter }: ItemsTableProps) {
     "brand"
   );
 
-  // Apply initial filter if provided
+  // Apply initial filters
   useEffect(() => {
     if (initialFilter?.status) {
-      table.getColumn("status")?.setFilterValue(initialFilter.status);
+      setColumnFilters([{ id: "status", value: initialFilter.status }]);
+    }
+    if (initialFilter?.clientName) {
+      setColumnFilters((prev) => [
+        ...prev,
+        { id: "clientName", value: initialFilter.clientName },
+      ]);
     }
   }, [initialFilter]);
 

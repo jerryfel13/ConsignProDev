@@ -129,6 +129,18 @@ const columns: ColumnDef<(typeof clientsData)[0]>[] = [
     },
   },
   {
+    accessorKey: "isConsigner",
+    header: "Consigner",
+    cell: ({ row }) => {
+      const isConsigner = row.getValue("isConsigner") as boolean;
+      return isConsigner ? (
+        <Badge variant="outline" className="bg-primary/5">
+          Consigner
+        </Badge>
+      ) : null;
+    },
+  },
+  {
     accessorKey: "consignments",
     header: ({ column }) => {
       return (
@@ -208,14 +220,26 @@ const columns: ColumnDef<(typeof clientsData)[0]>[] = [
                 <span>View Transactions</span>
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Link
-                href={`/clients/${client.id}/consignments`}
-                className="flex items-center"
-              >
-                <span>View Consignments</span>
-              </Link>
-            </DropdownMenuItem>
+            {client.isConsigner && (
+              <>
+                <DropdownMenuItem>
+                  <Link
+                    href={`/clients/${client.id}/consignments`}
+                    className="flex items-center"
+                  >
+                    <span>View Consignments</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Link
+                    href={`/clients/items/items/new`}
+                    className="flex items-center"
+                  >
+                    <span>Add Purchase Item</span>
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
@@ -404,6 +428,7 @@ export interface Client {
   phone: string;
   address: string;
   status: "Active" | "Inactive";
+  isConsigner: boolean;
   idNumber?: string;
   createdAt: Date;
   updatedAt: Date;

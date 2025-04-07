@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 
 interface Client {
   id: string;
@@ -23,6 +24,7 @@ interface Client {
   phone: string;
   status: "Active" | "Inactive";
   address: string;
+  isConsigner: boolean;
 }
 
 export default function EditClientPage() {
@@ -44,6 +46,7 @@ export default function EditClientPage() {
           phone: "(555) 123-4567",
           status: "Active",
           address: "123 Main St, City, State",
+          isConsigner: false,
         };
 
         setClient(mockClient);
@@ -171,6 +174,18 @@ export default function EditClientPage() {
                     <SelectItem value="Inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="isConsigner">Consigner Status</Label>
+                <div className="flex h-10 w-full items-center">
+                  <Switch
+                    id="isConsigner"
+                    checked={client.isConsigner}
+                    onCheckedChange={(checked) =>
+                      setClient({ ...client, isConsigner: checked })
+                    }
+                  />
+                </div>
               </div>
             </div>
             <div className="space-y-2">

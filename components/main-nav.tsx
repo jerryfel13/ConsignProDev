@@ -23,13 +23,6 @@ export function MainNav() {
           Clients
         </Link>
         <Link
-          href="/items"
-          className="flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-        >
-          <Boxes className="mr-1 h-4 w-4" />
-          Items
-        </Link>
-        <Link
           href="/consignments"
           className="flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
         >
