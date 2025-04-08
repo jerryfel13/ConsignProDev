@@ -1,8 +1,8 @@
-import Link from "next/link"
-import { PlusCircle } from "lucide-react"
+import Link from "next/link";
+import { PlusCircle } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { ConsignmentsTable } from "@/components/consignments-table"
+import { Button } from "@/components/ui/button";
+import { ConsignmentsTable } from "@/components/consignments-table";
 
 export default function ConsignmentsPage() {
   return (
@@ -18,6 +18,5 @@ export default function ConsignmentsPage() {
       </div>
       <ConsignmentsTable />
     </div>
-  )
+  );
 }
-
