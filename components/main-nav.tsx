@@ -5,7 +5,12 @@ import { Menu, Package, Users, Boxes } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 export function MainNav() {
   const [isOpen, setIsOpen] = useState(false);
@@ -37,12 +42,6 @@ export function MainNav() {
           <Package className="mr-1 h-4 w-4" />
           Consignments
         </Link>
-        <Link
-          href="/reports"
-          className="flex items-center text-sm font-medium text-white transition-colors hover:text-white/80"
-        >
-          Reports
-        </Link>
       </nav>
       <div className="md:hidden ml-auto">
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -60,6 +59,7 @@ export function MainNav() {
             side="left"
             className="w-[250px] bg-[#989081] border-r-0 pt-10 text-white"
           >
+            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
             <nav className="flex flex-col gap-4">
               <Link
                 href="/"

@@ -18,9 +18,9 @@ export default function AuthWrapper({
 
     // Redirect logic
     if (auth && pathname === "/auth/login") {
-      router.push("/dashboard");
+      router.push("/verify-otp");
     } else if (!auth && pathname !== "/auth/login") {
-      router.push("/auth/login");
+      router.push("/auth/verify-otp");
     }
   }, [pathname, router]);
 

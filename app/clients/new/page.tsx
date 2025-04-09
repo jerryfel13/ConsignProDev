@@ -1,77 +1,132 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { ArrowLeft, Save } from "lucide-react"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { ArrowLeft, Save } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import Link from "next/link"
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import Link from "next/link";
+import { BankDetailsModal } from "@/components/bank-details-modal";
 
+// Define the form schema based on the database table
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
-  email: z.string().email({
-    message: "Please enter a valid email address.",
-  }),
-  phone: z.string().min(10, {
-    message: "Phone number must be at least 10 digits.",
-  }),
-  address: z.string().min(5, {
-    message: "Address must be at least 5 characters.",
-  }),
-  city: z.string().min(2, {
-    message: "City must be at least 2 characters.",
-  }),
-  state: z.string().min(2, {
-    message: "State must be at least 2 characters.",
-  }),
-  zip: z.string().min(5, {
-    message: "ZIP code must be at least 5 characters.",
-  }),
-  status: z.enum(["Active", "Inactive"]),
-  notes: z.string().optional(),
-})
+  external_id: z
+    .string()
+    .min(1, "External ID is required")
+    .max(10, "External ID must be at most 10 characters"),
+  first_name: z
+    .string()
+    .min(1, "First name is required")
+    .max(100, "First name must be at most 100 characters"),
+  middle_name: z
+    .string()
+    .max(100, "Middle name must be at most 100 characters")
+    .optional(),
+  last_name: z
+    .string()
+    .min(1, "Last name is required")
+    .max(100, "Last name must be at most 100 characters"),
+  suffix: z.string().max(10, "Suffix must be at most 10 characters").optional(),
+  email: z
+    .string()
+    .email("Please enter a valid email address")
+    .max(100, "Email must be at most 100 characters"),
+  contact_no: z
+    .string()
+    .min(1, "Contact number is required")
+    .max(100, "Contact number must be at most 100 characters"),
+  address: z.string().optional(),
+  instagram: z
+    .string()
+    .max(100, "Instagram handle must be at most 100 characters")
+    .optional(),
+  facebook: z
+    .string()
+    .max(100, "Facebook profile must be at most 100 characters")
+    .optional(),
+  is_consignor: z.boolean().default(false),
+  is_active: z.boolean().default(true),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 export default function NewClientPage() {
-  const router = useRouter()
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showBankModal, setShowBankModal] = useState(false);
+  const [bankDetails, setBankDetails] = useState<{
+    account_name: string;
+    account_no: string;
+    bank: string;
+  } | null>(null);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
-      name: "",
+      external_id: "",
+      first_name: "",
+      middle_name: "",
+      last_name: "",
+      suffix: "",
       email: "",
-      phone: "",
+      contact_no: "",
       address: "",
-      city: "",
-      state: "",
-      zip: "",
-      status: "Active",
-      notes: "",
+      instagram: "",
+      facebook: "",
+      is_consignor: false,
+      is_active: true,
     },
-  })
+  });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true)
+  const onSubmit = async (values: FormValues) => {
+    setIsSubmitting(true);
 
     // In a real application, you would send this data to your API
-    console.log(values)
+    console.log(values);
 
     // Simulate API call
     setTimeout(() => {
-      setIsSubmitting(false)
-      router.push("/clients")
-    }, 1000)
-  }
+      setIsSubmitting(false);
+      router.push("/clients");
+    }, 1000);
+  };
+
+  const handleBankDetailsSave = (data: {
+    account_name: string;
+    account_no: string;
+    bank: string;
+  }) => {
+    setBankDetails(data);
+    form.setValue("is_consignor", true);
+    setShowBankModal(false);
+  };
+
+  const handleBankModalClose = () => {
+    setShowBankModal(false);
+    form.setValue("is_consignor", false);
+  };
 
   return (
     <div className="container py-10">
@@ -88,7 +143,9 @@ export default function NewClientPage() {
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
           <CardTitle>Client Information</CardTitle>
-          <CardDescription>Enter the details for the new client record.</CardDescription>
+          <CardDescription>
+            Enter the details for the new client record.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -96,12 +153,64 @@ export default function NewClientPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="name"
+                  name="external_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Name</FormLabel>
+                      <FormLabel>External ID</FormLabel>
                       <FormControl>
-                        <Input placeholder="John Doe" {...field} />
+                        <Input placeholder="Enter external ID" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="first_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter first name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="middle_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Middle Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter middle name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="last_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter last name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="suffix"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Suffix</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter suffix" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -114,7 +223,11 @@ export default function NewClientPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="john.doe@example.com" {...field} />
+                        <Input
+                          type="email"
+                          placeholder="Enter email"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -122,12 +235,12 @@ export default function NewClientPage() {
                 />
                 <FormField
                   control={form.control}
-                  name="phone"
+                  name="contact_no"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
+                      <FormLabel>Contact Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="(555) 123-4567" {...field} />
+                        <Input placeholder="Enter contact number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -135,105 +248,47 @@ export default function NewClientPage() {
                 />
                 <FormField
                   control={form.control}
-                  name="status"
+                  name="instagram"
                   render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>Status</FormLabel>
+                    <FormItem>
+                      <FormLabel>Instagram</FormLabel>
                       <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex space-x-4"
-                        >
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="Active" />
-                            </FormControl>
-                            <FormLabel className="font-normal">Active</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="Inactive" />
-                            </FormControl>
-                            <FormLabel className="font-normal">Inactive</FormLabel>
-                          </FormItem>
-                        </RadioGroup>
+                        <Input
+                          placeholder="Enter Instagram handle"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium mb-4">Address Information</h3>
-                <div className="grid grid-cols-1 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Street Address</FormLabel>
-                        <FormControl>
-                          <Input placeholder="123 Main St" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>City</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Anytown" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="state"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>State</FormLabel>
-                          <FormControl>
-                            <Input placeholder="CA" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="zip"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>ZIP Code</FormLabel>
-                          <FormControl>
-                            <Input placeholder="12345" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
+                <FormField
+                  control={form.control}
+                  name="facebook"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Facebook</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter Facebook profile"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <FormField
                 control={form.control}
-                name="notes"
+                name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes</FormLabel>
+                    <FormLabel>Address</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Additional information about the client..."
+                        placeholder="Enter address"
                         className="min-h-[100px]"
                         {...field}
                       />
@@ -243,8 +298,58 @@ export default function NewClientPage() {
                 )}
               />
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="is_consignor"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">
+                          Is Consignor
+                        </FormLabel>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setShowBankModal(true);
+                            } else {
+                              field.onChange(false);
+                              setBankDetails(null);
+                            }
+                          }}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="is_active"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Is Active</FormLabel>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <CardFooter className="px-0 pb-0">
-                <Button type="submit" disabled={isSubmitting} className="w-full">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full"
+                >
                   {isSubmitting ? (
                     <span className="flex items-center">
                       <svg
@@ -281,7 +386,13 @@ export default function NewClientPage() {
           </Form>
         </CardContent>
       </Card>
-    </div>
-  )
-}
 
+      <BankDetailsModal
+        isOpen={showBankModal}
+        onClose={handleBankModalClose}
+        onSave={handleBankDetailsSave}
+        clientExtId={form.getValues("external_id")}
+      />
+    </div>
+  );
+}

@@ -55,15 +55,7 @@ export default function NewClientItemPage() {
   return (
     <div className="flex flex-col p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={`/clients/${params.id}`}>
-              <ArrowLeft className="h-4 w-4" />
-              Back to Client
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-bold">Add New Item</h1>
-        </div>
+        <div className="flex items-center space-x-2"></div>
       </div>
       <ItemForm
         onSubmit={handleSubmit}

@@ -46,8 +46,29 @@ import { ItemsTable } from "@/components/items-table";
 import { ItemForm } from "@/components/item-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Move the data to a separate file to avoid re-renders
-import { clientsData } from "@/lib/data";
+// For the purpose of this example, let's define the data directly here to ensure consignor status is correct
+const clientsData = [
+  {
+    id: "1",
+    name: "Jane Doe",
+    email: "jane.doe@example.com",
+    phone: "(555) 123-4567",
+    status: "Active",
+    isConsigner: true,
+    consignments: 3,
+    totalValue: "12500.00",
+  },
+  {
+    id: "2",
+    name: "John Smith",
+    email: "john.smith@example.com",
+    phone: "(555) 987-6543",
+    status: "Active",
+    isConsigner: false,
+    consignments: 0,
+    totalValue: "8300.00",
+  },
+];
 
 // Utility function to format currency in PHP
 const formatCurrency = (amount: string | number) => {
@@ -221,7 +242,7 @@ const columns: ColumnDef<(typeof clientsData)[0]>[] = [
                 <span>View Transactions</span>
               </Link>
             </DropdownMenuItem>
-            {client.isConsigner && (
+            {client.isConsigner ? (
               <>
                 <DropdownMenuItem>
                   <Link
@@ -233,13 +254,30 @@ const columns: ColumnDef<(typeof clientsData)[0]>[] = [
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Link
-                    href={`/clients/items/items/new`}
+                    href={`/consignments/new?clientId=${client.id}`}
+                    className="flex items-center"
+                  >
+                    <span>Add Consignment</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Link
+                    href={`/clients/items/items/new?clientId=${client.id}`}
                     className="flex items-center"
                   >
                     <span>Add Purchase Item</span>
                   </Link>
                 </DropdownMenuItem>
               </>
+            ) : (
+              <DropdownMenuItem>
+                <Link
+                  href={`/clients/items/items/new?clientId=${client.id}`}
+                  className="flex items-center"
+                >
+                  <span>Add Purchase Item</span>
+                </Link>
+              </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem

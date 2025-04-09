@@ -32,20 +32,15 @@ export default function LoginPage() {
         return;
       }
 
-      console.log("Attempting login with:", email);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log("Simulating OTP send for:", email);
 
-      if (email === "admin@example.com") {
-        localStorage.setItem("userEmail", email);
-        localStorage.setItem("isAuthenticated", "true");
-        router.push("/");
-      } else {
-        setError("Invalid email address.");
-      }
+      localStorage.setItem("userEmail", email);
+
+      router.push("/auth/verify-otp");
+      return;
     } catch (err) {
-      console.error("Login error:", err);
-      setError("Failed to login. Please try again.");
-    } finally {
+      console.error("Login/OTP Send error:", err);
+      setError("Failed to send verification code. Please try again.");
       setIsLoading(false);
     }
   };
@@ -55,7 +50,9 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
           <CardTitle className="text-3xl font-bold">CRCMS</CardTitle>
-          <CardDescription>Enter your credentials to login. </CardDescription>
+          <CardDescription>
+            Enter your email to receive a verification code.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -101,7 +98,7 @@ export default function LoginPage() {
                   ></path>
                 </svg>
               ) : (
-                "Sign In"
+                "Send Verification Code"
               )}
             </Button>
           </form>
