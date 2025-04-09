@@ -363,19 +363,19 @@ export function ConsignmentsTable() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Consignments List</CardTitle>
+        <CardTitle className="text-lg sm:text-xl">Consignments List</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <Select
                 value={searchType}
                 onValueChange={(value: "brand" | "code" | "client") =>
                   setSearchType(value)
                 }
               >
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-full sm:w-[130px] h-9">
                   <SelectValue placeholder="Search by..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -384,10 +384,10 @@ export function ConsignmentsTable() {
                   <SelectItem value="client">Client</SelectItem>
                 </SelectContent>
               </Select>
-              <div className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-muted-foreground" />
+              <div className="relative flex-1 min-w-[150px]">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder={`Search by ${searchType}...`}
+                  placeholder={`Search ${searchType}...`}
                   value={
                     (table.getColumn(searchType)?.getFilterValue() as string) ??
                     ""
@@ -397,11 +397,11 @@ export function ConsignmentsTable() {
                       .getColumn(searchType)
                       ?.setFilterValue(event.target.value)
                   }
-                  className="max-w-sm"
+                  className="pl-8 h-9 w-full"
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               <Button
                 variant="outline"
                 size="sm"
@@ -420,7 +420,7 @@ export function ConsignmentsTable() {
               </Button>
             </div>
           </div>
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -470,7 +470,7 @@ export function ConsignmentsTable() {
               </TableBody>
             </Table>
           </div>
-          <div className="flex items-center justify-end space-x-2">
+          <div className="flex items-center justify-end space-x-2 py-4">
             <div className="flex-1 text-sm text-muted-foreground">
               {table.getFilteredSelectedRowModel().rows.length} of{" "}
               {table.getFilteredRowModel().rows.length} row(s) selected.

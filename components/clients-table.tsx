@@ -293,42 +293,44 @@ export function ClientsTable() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Clients List</CardTitle>
+        <CardTitle className="text-lg sm:text-xl">Clients List</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-1 items-center space-x-2">
-              <div className="flex items-center space-x-2">
-                <Select
-                  value={searchType}
-                  onValueChange={(value: "name" | "contact" | "id") =>
-                    setSearchType(value)
-                  }
-                >
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Search by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="name">Name</SelectItem>
-                    <SelectItem value="contact">Contact</SelectItem>
-                    <SelectItem value="id">ID</SelectItem>
-                  </SelectContent>
-                </Select>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <Select
+                value={searchType}
+                onValueChange={(value: "name" | "contact" | "id") =>
+                  setSearchType(value)
+                }
+              >
+                <SelectTrigger className="w-full sm:w-[110px] h-9">
+                  <SelectValue placeholder="Search by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Name</SelectItem>
+                  <SelectItem value="contact">Contact</SelectItem>
+                  <SelectItem value="id">ID</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="relative flex-1 min-w-[150px]">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder={
                     searchType === "name"
-                      ? "Search by name..."
+                      ? "Search name..."
                       : searchType === "contact"
-                      ? "Search by email or phone..."
-                      : "Search by ID..."
+                      ? "Search email/phone..."
+                      : "Search ID..."
                   }
                   value={globalFilter}
-                  onChange={(e) => {
-                    setGlobalFilter(e.target.value);
-                    table.setGlobalFilter(e.target.value);
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const value = e.target.value;
+                    setGlobalFilter(value);
+                    table.setGlobalFilter(value);
                   }}
-                  className="max-w-sm"
+                  className="pl-8 h-9 w-full"
                 />
               </div>
               <Select
@@ -338,7 +340,7 @@ export function ClientsTable() {
                     ?.setFilterValue(value === "all" ? "" : value);
                 }}
               >
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-full sm:w-[120px] h-9">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -349,7 +351,7 @@ export function ClientsTable() {
               </Select>
             </div>
           </div>
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -399,12 +401,12 @@ export function ClientsTable() {
               </TableBody>
             </Table>
           </div>
-          <div className="flex items-center justify-end space-x-2">
-            <div className="flex-1 text-sm text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 py-4">
+            <div className="flex-1 text-sm text-muted-foreground text-center sm:text-left">
               {table.getFilteredSelectedRowModel().rows.length} of{" "}
               {table.getFilteredRowModel().rows.length} row(s) selected.
             </div>
-            <div className="space-x-2">
+            <div className="flex items-center space-x-2">
               <Button
                 variant="outline"
                 size="sm"
