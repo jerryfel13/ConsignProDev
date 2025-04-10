@@ -5,9 +5,17 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { ArrowLeft, Save } from "lucide-react";
+import { Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -19,23 +27,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import Link from "next/link";
-import { BankDetailsModal } from "@/components/bank-details-modal";
+import { BankDetailsModal } from "@/components/bank-details-modal"; // Assuming this is correctly located
 
-// Define the form schema based on the database table
+// Define the form schema (updated)
 const formSchema = z.object({
-  external_id: z
-    .string()
-    .min(1, "External ID is required")
-    .max(10, "External ID must be at most 10 characters"),
   first_name: z
     .string()
     .min(1, "First name is required")
@@ -55,8 +50,8 @@ const formSchema = z.object({
     .max(100, "Email must be at most 100 characters"),
   contact_no: z
     .string()
-    .min(1, "Contact number is required")
-    .max(100, "Contact number must be at most 100 characters"),
+    .max(100, "Contact number must be at most 100 characters")
+    .optional(),
   address: z.string().optional(),
   instagram: z
     .string()
@@ -67,13 +62,22 @@ const formSchema = z.object({
     .max(100, "Facebook profile must be at most 100 characters")
     .optional(),
   is_consignor: z.boolean().default(false),
-  is_active: z.boolean().default(true),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-export default function NewClientPage() {
-  const router = useRouter();
+interface AddClientModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onClientAdded?: () => void; // Optional callback after successful addition
+}
+
+export function AddClientModal({
+  isOpen,
+  onClose,
+  onClientAdded,
+}: AddClientModalProps) {
+  const router = useRouter(); // Keep for potential future use, but might not navigate directly
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
   const [bankDetails, setBankDetails] = useState<{
@@ -85,7 +89,6 @@ export default function NewClientPage() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema) as any,
     defaultValues: {
-      external_id: "",
       first_name: "",
       middle_name: "",
       last_name: "",
@@ -96,21 +99,45 @@ export default function NewClientPage() {
       instagram: "",
       facebook: "",
       is_consignor: false,
-      is_active: true,
     },
   });
 
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
 
-    // In a real application, you would send this data to your API
-    console.log(values);
+    // Include bank details if they exist
+    const submissionData = {
+      ...values,
+      bank_details: bankDetails, // Add bank details to the submission
+    };
 
-    // Simulate API call
-    setTimeout(() => {
+    console.log("Submitting new client:", submissionData);
+
+    // Replace with your actual API call
+    try {
+      // const response = await fetch('/api/clients', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(submissionData),
+      // });
+      // if (!response.ok) throw new Error('Failed to add client');
+      // const newClient = await response.json();
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
+
+      // Reset form, close modal, and trigger callback
+      form.reset();
+      setBankDetails(null);
+      onClose();
+      onClientAdded?.(); // Call the callback if provided
+
+      console.log("Client added successfully");
+      // Optionally show a success toast/notification here
+    } catch (error) {
+      console.error("Failed to submit client:", error);
+      // Handle error display to the user (e.g., show an error message in the modal)
+    } finally {
       setIsSubmitting(false);
-      router.push("/clients");
-    }, 1000);
+    }
   };
 
   const handleBankDetailsSave = (data: {
@@ -119,57 +146,55 @@ export default function NewClientPage() {
     bank: string;
   }) => {
     setBankDetails(data);
-    form.setValue("is_consignor", true);
+    // Don't force is_consignor to true here; let the switch handle it.
+    // The presence of bankDetails can imply consignor status upon submission.
     setShowBankModal(false);
   };
 
+  // This function now only closes the bank modal.
+  // The switch's onCheckedChange directly handles the field value.
   const handleBankModalClose = () => {
     setShowBankModal(false);
-    form.setValue("is_consignor", false);
+    // If the user closes the bank modal without saving,
+    // ensure the is_consignor switch reflects this if needed.
+    // Check if bankDetails are still null. If so, set is_consignor back to false.
+    if (!bankDetails) {
+      form.setValue("is_consignor", false, { shouldValidate: true });
+    }
   };
 
-  return (
-    <div className="container py-10">
-      <div className="flex items-center mb-6">
-        <Button variant="ghost" size="sm" asChild className="mr-2">
-          <Link href="/clients">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Clients
-          </Link>
-        </Button>
-        <h1 className="text-2xl font-bold">Add New Client</h1>
-      </div>
+  // Reset form state when the modal is closed externally
+  if (!isOpen && form.formState.isDirty) {
+    form.reset();
+    setBankDetails(null);
+  }
 
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle>Client Information</CardTitle>
-          <CardDescription>
-            Enter the details for the new client record.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+  return (
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Client</DialogTitle>
+            <DialogDescription>
+              Enter the details for the new client record. Click save when done.
+            </DialogDescription>
+          </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="external_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>External ID</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter external ID" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-6 px-1 py-4"
+            >
+              {/* Form Fields - Copied from app/clients/new/page.tsx */}
+              {/* Arrange them appropriately within the modal */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="first_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>First Name</FormLabel>
+                      <FormLabel>
+                        First Name <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="Enter first name" {...field} />
                       </FormControl>
@@ -182,7 +207,7 @@ export default function NewClientPage() {
                   name="middle_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Middle Name</FormLabel>
+                      <FormLabel>Middle Name (Optional)</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter middle name" {...field} />
                       </FormControl>
@@ -195,7 +220,9 @@ export default function NewClientPage() {
                   name="last_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Last Name</FormLabel>
+                      <FormLabel>
+                        Last Name <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="Enter last name" {...field} />
                       </FormControl>
@@ -208,7 +235,7 @@ export default function NewClientPage() {
                   name="suffix"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Suffix</FormLabel>
+                      <FormLabel>Suffix (Optional)</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter suffix" {...field} />
                       </FormControl>
@@ -221,7 +248,9 @@ export default function NewClientPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>
+                        Email <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="email"
@@ -238,7 +267,7 @@ export default function NewClientPage() {
                   name="contact_no"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contact Number</FormLabel>
+                      <FormLabel>Contact Number (Optional)</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter contact number" {...field} />
                       </FormControl>
@@ -251,7 +280,7 @@ export default function NewClientPage() {
                   name="instagram"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Instagram</FormLabel>
+                      <FormLabel>Instagram (Optional)</FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Enter Instagram handle"
@@ -267,7 +296,7 @@ export default function NewClientPage() {
                   name="facebook"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Facebook</FormLabel>
+                      <FormLabel>Facebook (Optional)</FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Enter Facebook profile"
@@ -285,11 +314,11 @@ export default function NewClientPage() {
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Address</FormLabel>
+                    <FormLabel>Address (Optional)</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Enter address"
-                        className="min-h-[100px]"
+                        className="min-h-[80px]"
                         {...field}
                       />
                     </FormControl>
@@ -298,26 +327,24 @@ export default function NewClientPage() {
                 )}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                 <FormField
                   control={form.control}
                   name="is_consignor"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                       <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                          Is Consignor
-                        </FormLabel>
+                        <FormLabel>Is Consignor</FormLabel>
                       </div>
                       <FormControl>
                         <Switch
                           checked={field.value}
                           onCheckedChange={(checked) => {
+                            field.onChange(checked); // Update the form field value
                             if (checked) {
-                              setShowBankModal(true);
+                              setShowBankModal(true); // Open bank modal only if checked is true
                             } else {
-                              field.onChange(false);
-                              setBankDetails(null);
+                              setBankDetails(null); // Clear bank details if unchecked
                             }
                           }}
                         />
@@ -325,35 +352,22 @@ export default function NewClientPage() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Is Active</FormLabel>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
               </div>
 
-              <CardFooter className="px-0 pb-0">
+              <DialogFooter>
                 <Button
-                  type="submit"
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
                   disabled={isSubmitting}
-                  className="w-full"
                 >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <span className="flex items-center">
                       <svg
-                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                        className="animate-spin -ml-1 mr-3 h-5 w-5"
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -381,18 +395,23 @@ export default function NewClientPage() {
                     </span>
                   )}
                 </Button>
-              </CardFooter>
+              </DialogFooter>
             </form>
           </Form>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
 
-      <BankDetailsModal
-        isOpen={showBankModal}
-        onClose={handleBankModalClose}
-        onSave={handleBankDetailsSave}
-        clientExtId={form.getValues("external_id")}
-      />
-    </div>
+      {/* Render BankDetailsModal conditionally */}
+      {showBankModal && (
+        <BankDetailsModal
+          isOpen={showBankModal}
+          onClose={handleBankModalClose}
+          onSave={handleBankDetailsSave}
+          // Pass external_id only if it exists and is needed.
+          // It might be better to collect bank details without depending on external_id yet.
+          clientExtId={""}
+        />
+      )}
+    </>
   );
 }

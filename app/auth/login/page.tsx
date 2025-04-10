@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -98,7 +100,7 @@ export default function LoginPage() {
                   ></path>
                 </svg>
               ) : (
-                "Send Verification Code"
+                "Log in"
               )}
             </Button>
           </form>

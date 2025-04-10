@@ -13,7 +13,7 @@ import {
   getFilteredRowModel,
   type ColumnFiltersState,
 } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal, Search } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Search, PlusCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AddConsignmentModal } from "./add-consignment-modal";
 
 // Utility function to format currency in PHP
 const formatCurrency = (amount: number) => {
@@ -89,11 +90,18 @@ const data = [
   },
   {
     id: "3",
-    title: "Art Deco Jewelry",
+    brand: "Chanel",
+    model: "Classic Flap",
+    code: "CH-CF-003",
+    color: "Black",
+    size: "Medium",
+    condition: "Good",
+    inclusions: ["Dust Bag"],
     client: "Alice Smith",
     clientId: "3",
     dateReceived: "2023-04-05",
     status: "Listed",
+    sellingPrice: 480000,
     value: "$5,200",
     commission: "30%",
   },
@@ -238,7 +246,7 @@ const columns: ColumnDef<(typeof data)[0]>[] = [
   },
   {
     accessorKey: "client",
-    header: "Client",
+    header: "Consignor",
     cell: ({ row }) => (
       <Link
         href={`/clients/${row.original.clientId}`}
@@ -293,10 +301,6 @@ const columns: ColumnDef<(typeof data)[0]>[] = [
     },
   },
   {
-    accessorKey: "commission",
-    header: "Commission",
-  },
-  {
     id: "actions",
     cell: ({ row }) => {
       const consignment = row.original;
@@ -326,7 +330,9 @@ const columns: ColumnDef<(typeof data)[0]>[] = [
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <Link href={`/clients/${consignment.clientId}`}>View client</Link>
+              <Link href={`/clients/${consignment.clientId}`}>
+                View consignor
+              </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -342,6 +348,7 @@ export function ConsignmentsTable() {
   const [searchType, setSearchType] = useState<"brand" | "code" | "client">(
     "brand"
   );
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const table = useReactTable({
     data,
@@ -360,10 +367,20 @@ export function ConsignmentsTable() {
     },
   });
 
+  const handleConsignmentAdded = () => {
+    console.log(
+      "New consignment added from table component, refresh data here."
+    );
+  };
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-lg sm:text-xl">Consignments List</CardTitle>
+        <Button onClick={() => setIsModalOpen(true)} size="sm" className="h-9">
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Consignment
+        </Button>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -478,6 +495,12 @@ export function ConsignmentsTable() {
           </div>
         </div>
       </CardContent>
+
+      <AddConsignmentModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConsignmentAdded={handleConsignmentAdded}
+      />
     </Card>
   );
 }

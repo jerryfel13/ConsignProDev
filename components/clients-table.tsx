@@ -13,7 +13,7 @@ import {
   getFilteredRowModel,
   type ColumnFiltersState,
 } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal, Search } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Search, PlusCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -45,6 +45,7 @@ import { Badge } from "@/components/ui/badge";
 import { ItemsTable } from "@/components/items-table";
 import { ItemForm } from "@/components/item-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AddClientModal } from "./add-client-modal";
 
 // For the purpose of this example, let's define the data directly here to ensure consignor status is correct
 const clientsData = [
@@ -180,24 +181,6 @@ const columns: ColumnDef<(typeof clientsData)[0]>[] = [
     ),
   },
   {
-    accessorKey: "totalValue",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Total Value
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => {
-      const value = row.getValue("totalValue");
-      return formatCurrency(value as string);
-    },
-  },
-  {
     id: "actions",
     cell: ({ row }) => {
       const client = row.original;
@@ -305,6 +288,7 @@ export function ClientsTable() {
   const [searchType, setSearchType] = useState<"name" | "contact" | "id">(
     "name"
   );
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const table = useReactTable({
     data: clientsData,
@@ -327,6 +311,12 @@ export function ClientsTable() {
       return value.includes(filterValue.toLowerCase());
     },
   });
+
+  const handleClientAdded = () => {
+    console.log("New client added, refresh data here.");
+    // In a real app, you would refetch the clientsData or trigger a state update
+    // Example: refetchClients();
+  };
 
   return (
     <Card>
@@ -387,6 +377,14 @@ export function ClientsTable() {
                   <SelectItem value="Inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
+              <Button
+                onClick={() => setIsModalOpen(true)}
+                size="sm"
+                className="h-9"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Client
+              </Button>
             </div>
           </div>
           <div className="rounded-md border overflow-x-auto">
@@ -465,6 +463,11 @@ export function ClientsTable() {
           </div>
         </div>
       </CardContent>
+      <AddClientModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onClientAdded={handleClientAdded}
+      />
     </Card>
   );
 }

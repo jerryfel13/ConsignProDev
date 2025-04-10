@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MailCheck } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -30,12 +31,25 @@ function maskEmail(email: string | null): string {
   )}@${domain}`;
 }
 
+// Helper function to format time
+function formatTime(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
+    .toString()
+    .padStart(2, "0")}`;
+}
+
 export default function VerifyOtpPage() {
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const router = useRouter();
+  const [timer, setTimer] = useState(300); // 5 minutes in seconds
+  const [canResend, setCanResend] = useState(false);
+  const [isResending, setIsResending] = useState(false); // State for resend loading
+  const { verifyOtp, sendOtp } = useAuth();
 
   // Get email from localStorage on component mount
   useEffect(() => {
@@ -43,25 +57,53 @@ export default function VerifyOtpPage() {
     setUserEmail(storedEmail);
   }, []);
 
+  // Timer logic
+  useEffect(() => {
+    if (timer <= 0) {
+      setCanResend(true);
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setTimer((prevTimer) => prevTimer - 1);
+    }, 1000);
+
+    // Cleanup interval on component unmount or when timer reaches 0
+    return () => clearInterval(intervalId);
+  }, [timer]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
-    // Mock OTP Verification
-    await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate network delay
-
-    if (otp === "123456") {
-      // Correct OTP
-      localStorage.setItem("isAuthenticated", "true"); // Mark as authenticated
-      router.push("/dashboard"); // Redirect to dashboard
-    } else {
-      // Incorrect OTP
+    try {
+      await verifyOtp(otp);
+      router.push("/dashboard"); // Redirect to dashboard after successful verification
+    } catch (err) {
       setError("Invalid verification code. Please try again.");
       setOtp(""); // Clear the OTP input
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    setIsLoading(false);
+  const handleResendOtp = async () => {
+    if (!canResend || isResending || !userEmail) return;
+
+    setIsResending(true);
+    setError(""); // Clear previous errors
+
+    try {
+      await sendOtp(userEmail);
+      // Reset timer and resend state
+      setTimer(300);
+      setCanResend(false);
+    } catch (err) {
+      setError("Failed to resend OTP. Please try again.");
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -107,13 +149,30 @@ export default function VerifyOtpPage() {
             )}
 
             <div className="text-center text-sm text-gray-500">
-              I didn't receive a code{" "}
-              {/* Add resend logic/timer here if needed */}
+              {canResend ? (
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={isResending}
+                  className={`font-medium text-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isResending ? "animate-pulse" : ""
+                  }`}
+                >
+                  {isResending ? "Resending..." : "Resend OTP"}
+                </button>
+              ) : (
+                <span>
+                  Didn't receive a code? Resend in{" "}
+                  <span className="font-medium text-gray-800">
+                    {formatTime(timer)}
+                  </span>
+                </span>
+              )}
             </div>
 
             <Button
               type="submit"
-              disabled={isLoading || otp.length !== 6}
+              disabled={otp.length !== 6 || isLoading}
               className="w-full h-10"
             >
               {isLoading ? (
@@ -123,7 +182,6 @@ export default function VerifyOtpPage() {
                   fill="none"
                   viewBox="0 0 24 24"
                 >
-                  {/* SVG Loader */}
                   <circle
                     className="opacity-25"
                     cx="12"
