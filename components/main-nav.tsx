@@ -16,46 +16,21 @@ export function MainNav() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="flex items-center gap-6 md:gap-10">
-      <Link href="/" className="flex items-center space-x-2 text-white">
-        <Package className="h-6 w-6" />
-        <span className="inline-block font-bold">CRCMS</span>
-      </Link>
-      <nav className="hidden md:flex md:gap-6">
-        <Link
-          href="/"
-          className="flex items-center text-sm font-medium text-white transition-colors hover:text-white/80"
-        >
-          Dashboard
-        </Link>
-        <Link
-          href="/clients"
-          className="flex items-center text-sm font-medium text-white transition-colors hover:text-white/80"
-        >
-          <Users className="mr-1 h-4 w-4" />
-          Clients
-        </Link>
-        <Link
-          href="/consignments"
-          className="flex items-center text-sm font-medium text-white transition-colors hover:text-white/80"
-        >
-          <Package className="mr-1 h-4 w-4" />
-          Consignments
-        </Link>
-      </nav>
-      <div className="md:hidden ml-auto">
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
-          <SheetTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20 hover:text-white"
-            >
-              <Menu className="h-6 w-6" />
-              <span className="sr-only">Toggle Menu</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent
+    <div className="flex items-center justify-between gap-2 md:gap-10">
+      <div className="flex items-center gap-4">
+        <div className="md:hidden">
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-black hover:bg-white/20 hover:text-white"
+              >
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Toggle Menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent
             side="left"
             className="w-[250px] bg-[#989081] border-r-0 pt-10 text-white"
           >
@@ -93,8 +68,35 @@ export function MainNav() {
               </Link>
             </nav>
           </SheetContent>
-        </Sheet>
+          </Sheet>
+        </div>
+        <Link href="/" className="flex items-center space-x-2 text-white">
+          <Package className="h-6 w-6" />
+          <span className="inline-block font-bold">CRCMS</span>
+        </Link>
       </div>
+      <nav className="hidden md:flex md:gap-6">
+        <Link
+          href="/"
+          className="flex items-center text-sm font-medium text-white transition-colors hover:text-white/80"
+        >
+          Dashboard
+        </Link>
+        <Link
+          href="/clients"
+          className="flex items-center text-sm font-medium text-white transition-colors hover:text-white/80"
+        >
+          <Users className="mr-1 h-4 w-4" />
+          Clients
+        </Link>
+        <Link
+          href="/consignments"
+          className="flex items-center text-sm font-medium text-white transition-colors hover:text-white/80"
+        >
+          <Package className="mr-1 h-4 w-4" />
+          Consignments
+        </Link>
+      </nav>
     </div>
   );
 }

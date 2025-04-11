@@ -91,3 +91,39 @@ input, select, textarea, button,
 .dropdown-menu-item:focus {
   background-color: #f3f4f6 !important;
 }
+
+@media (max-width: 768px) {
+  /* Stack cards vertically */
+  .card-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Adjust font sizes for better readability */
+  h1, h2, h3, h4, h5, h6 {
+    font-size: 1.2em;
+  }
+
+  /* Responsive navbar */
+  .navbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .navbar .menu {
+    display: none;
+  }
+
+  .navbar .hamburger {
+    display: block;
+    color: black !important;
+    background-color: transparent;
+  }
+}
+
+input[type="search"] {
+  background-color: #f3f4f6;
+  color: #0f172a;
+  border-radius: var(--radius);
+}

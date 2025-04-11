@@ -122,26 +122,24 @@ export function SiteHeader() {
         className="sticky top-0 z-40 w-full border-b"
         style={{ backgroundColor: "#989081" }}
       >
-        <div className="container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="container flex h-16 items-center px-0 sm:px-0 lg:px-0">
           <MainNav />
-          <div className="flex items-center space-x-2 sm:space-x-4 ml-auto">
-            <div className="relative w-full max-w-xs sm:max-w-sm">
+          <div className="flex items-center gap-4 ml-auto">
+            <div className="relative w-full max-w-[200px] sm:max-w-sm">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search..."
                 className="pl-8 h-9 bg-white/90 border-0 text-gray-900 placeholder:text-gray-500 rounded-md"
               />
             </div>
-            {/* User Dropdown Menu */}
             {loading ? (
-              // Optional: Show a loading skeleton or spinner
               <div className="h-10 w-24 bg-muted/20 rounded-full animate-pulse"></div>
             ) : user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="relative h-10 w-auto px-2 space-x-2 rounded-full hover:bg-muted/10"
+                    className="relative h-10 w-auto px-2 space-x-2 rounded-full hover:bg-muted/10 mr-0"
                   >
                     <Avatar className="h-8 w-8">
                       <AvatarImage
@@ -156,11 +154,11 @@ export function SiteHeader() {
                           .toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="text-left hidden sm:block group-hover:text-white">
-                      <p className="text-sm font-medium leading-none text-black group-hover:text-white">
+                    <div className="text-left hidden sm:block pr-0">
+                      <p className="text-sm font-medium leading-none text-black">
                         {user.name ?? "-"}
                       </p>
-                      <p className="text-xs leading-none text-black/80 group-hover:text-white/80">
+                      <p className="text-xs leading-none text-black/80">
                         {user.role ?? "-"}
                       </p>
                     </div>
@@ -212,8 +210,7 @@ export function SiteHeader() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : // Optional: Render something if user is not logged in (though this header might not show)
-            null}
+            ) : null}
           </div>
         </div>
       </header>
