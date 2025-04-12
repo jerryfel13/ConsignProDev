@@ -24,7 +24,7 @@ interface Client {
   phone: string;
   status: "Active" | "Inactive";
   address: string;
-  isConsigner: boolean;
+  isConsignor: boolean;
 }
 
 export default function EditClientPage() {
@@ -46,7 +46,7 @@ export default function EditClientPage() {
           phone: "(555) 123-4567",
           status: "Active",
           address: "123 Main St, City, State",
-          isConsigner: false,
+          isConsignor: false,
         };
 
         setClient(mockClient);
@@ -176,13 +176,13 @@ export default function EditClientPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="isConsigner">Consigner Status</Label>
+                <Label htmlFor="isConsignor">Consignor Status</Label>
                 <div className="flex h-10 w-full items-center">
                   <Switch
-                    id="isConsigner"
-                    checked={client.isConsigner}
+                    id="isConsignor"
+                    checked={client.isConsignor}
                     onCheckedChange={(checked) =>
-                      setClient({ ...client, isConsigner: checked })
+                      setClient({ ...client, isConsignor: checked })
                     }
                   />
                 </div>

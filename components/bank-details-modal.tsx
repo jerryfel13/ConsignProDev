@@ -72,7 +72,7 @@ export function BankDetailsModal({
         <DialogHeader>
           <DialogTitle>Bank Details</DialogTitle>
           <DialogDescription>
-            Please provide the bank details for the consignor.
+            Please provide the bank details for the Consignor.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

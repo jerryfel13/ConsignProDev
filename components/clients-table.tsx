@@ -47,7 +47,7 @@ import { ItemForm } from "@/components/item-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddClientModal } from "./add-client-modal";
 
-// For the purpose of this example, let's define the data directly here to ensure consignor status is correct
+// For the purpose of this example, let's define the data directly here to ensure Consignor status is correct
 const clientsData = [
   {
     id: "1",
@@ -55,7 +55,7 @@ const clientsData = [
     email: "jane.doe@example.com",
     phone: "(555) 123-4567",
     status: "Active",
-    isConsigner: true,
+    isConsignor: true,
     consignments: 3,
     totalValue: "12500.00",
   },
@@ -65,7 +65,7 @@ const clientsData = [
     email: "john.smith@example.com",
     phone: "(555) 987-6543",
     status: "Active",
-    isConsigner: false,
+    isConsignor: false,
     consignments: 0,
     totalValue: "8300.00",
   },
@@ -152,13 +152,13 @@ const columns: ColumnDef<(typeof clientsData)[0]>[] = [
     },
   },
   {
-    accessorKey: "isConsigner",
-    header: "Consigner",
+    accessorKey: "isConsignor",
+    header: "Consignor",
     cell: ({ row }) => {
-      const isConsigner = row.getValue("isConsigner") as boolean;
-      return isConsigner ? (
+      const isConsignor = row.getValue("isConsignor") as boolean;
+      return isConsignor ? (
         <Badge variant="outline" className="bg-primary/5">
-          Consigner
+          Consignor
         </Badge>
       ) : null;
     },
@@ -225,7 +225,7 @@ const columns: ColumnDef<(typeof clientsData)[0]>[] = [
                 <span>View Transactions</span>
               </Link>
             </DropdownMenuItem>
-            {client.isConsigner ? (
+            {client.isConsignor ? (
               <>
                 <DropdownMenuItem>
                   <Link
@@ -479,7 +479,7 @@ export interface Client {
   phone: string;
   address: string;
   status: "Active" | "Inactive";
-  isConsigner: boolean;
+  isConsignor: boolean;
   idNumber?: string;
   createdAt: Date;
   updatedAt: Date;

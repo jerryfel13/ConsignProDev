@@ -331,7 +331,7 @@ const columns: ColumnDef<(typeof data)[0]>[] = [
             </DropdownMenuItem>
             <DropdownMenuItem>
               <Link href={`/clients/${consignment.clientId}`}>
-                View consignor
+                View Consignor
               </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>

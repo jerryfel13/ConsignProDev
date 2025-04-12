@@ -82,16 +82,19 @@ export function Overview() {
         <Legend verticalAlign="top" height={36} />
         <Bar
           dataKey="clients"
+          name="Clients"
           fill="var(--color-clients)"
           radius={[4, 4, 0, 0]}
         />
         <Bar
           dataKey="consignments"
+          name="Consignments"
           fill="var(--color-consignments)"
           radius={[4, 4, 0, 0]}
         />
         <Bar
           dataKey="purchasedItems"
+          name="Purchased Items"
           fill="var(--color-purchasedItems)"
           radius={[4, 4, 0, 0]}
         />

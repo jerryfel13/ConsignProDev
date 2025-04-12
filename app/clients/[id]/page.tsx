@@ -48,7 +48,7 @@ const getClientData = (id: string) => {
       address: "123 Main Street, Anytown, USA",
       instagram: "janedoe_insta",
       facebook: "janedoe.fb",
-      is_consignor: true,
+      is_Consignor: true,
       is_active: true,
       created_at: "2023-05-15",
       bank_details: {
@@ -70,7 +70,7 @@ const getClientData = (id: string) => {
       address: "456 Oak Lane, Somewhere, USA",
       instagram: "johnsmith_insta",
       facebook: "johnsmith.fb",
-      is_consignor: false,
+      is_Consignor: false,
       is_active: true,
       created_at: "2023-06-20",
       bank_details: null,
@@ -282,7 +282,7 @@ export default function ClientDetailPage({
                   </h1>
                   <div className="flex justify-center gap-2 mt-2 mb-1 md:mt-0 md:mb-0">
                     {clientData.is_active && <Badge>Active</Badge>}
-                    {clientData.is_consignor && (
+                    {clientData.is_Consignor && (
                       <Badge variant="secondary">Consignor</Badge>
                     )}
                   </div>
@@ -327,7 +327,7 @@ export default function ClientDetailPage({
         <div className="mb-6">
           <TabsList className="w-full grid grid-cols-3 md:w-auto md:mx-auto">
             <TabsTrigger value="details">Details</TabsTrigger>
-            {clientData.is_consignor && (
+            {clientData.is_Consignor && (
               <TabsTrigger value="items">Items</TabsTrigger>
             )}
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
@@ -428,8 +428,8 @@ export default function ClientDetailPage({
             </CardContent>
           </Card>
 
-          {/* Bank Details Card if consignor */}
-          {clientData.is_consignor && clientData.bank_details && (
+          {/* Bank Details Card if Consignor */}
+          {clientData.is_Consignor && clientData.bank_details && (
             <Card className="shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center">
@@ -437,7 +437,7 @@ export default function ClientDetailPage({
                   <CardTitle>Bank Details</CardTitle>
                 </div>
                 <CardDescription>
-                  Banking information for consignor
+                  Banking information for Consignor
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -497,7 +497,7 @@ export default function ClientDetailPage({
                     Consignor Status
                   </h3>
                   <p className="font-medium">
-                    {clientData.is_consignor ? "Yes" : "No"}
+                    {clientData.is_Consignor ? "Yes" : "No"}
                   </p>
                 </div>
               </div>
@@ -505,8 +505,8 @@ export default function ClientDetailPage({
           </Card>
         </TabsContent>
 
-        {/* Items Tab (only for consignors) */}
-        {clientData.is_consignor && (
+        {/* Items Tab (only for Consignors) */}
+        {clientData.is_Consignor && (
           <TabsContent value="items" className="mt-0">
             <Card className="shadow-sm">
               <CardHeader className="pb-3">

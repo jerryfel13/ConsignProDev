@@ -61,7 +61,7 @@ const formSchema = z.object({
     .string()
     .max(100, "Facebook profile must be at most 100 characters")
     .optional(),
-  is_consignor: z.boolean().default(false),
+  is_Consignor: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -98,7 +98,7 @@ export function AddClientModal({
       address: "",
       instagram: "",
       facebook: "",
-      is_consignor: false,
+      is_Consignor: false,
     },
   });
 
@@ -146,8 +146,8 @@ export function AddClientModal({
     bank: string;
   }) => {
     setBankDetails(data);
-    // Don't force is_consignor to true here; let the switch handle it.
-    // The presence of bankDetails can imply consignor status upon submission.
+    // Don't force is_Consignor to true here; let the switch handle it.
+    // The presence of bankDetails can imply Consignor status upon submission.
     setShowBankModal(false);
   };
 
@@ -156,10 +156,10 @@ export function AddClientModal({
   const handleBankModalClose = () => {
     setShowBankModal(false);
     // If the user closes the bank modal without saving,
-    // ensure the is_consignor switch reflects this if needed.
-    // Check if bankDetails are still null. If so, set is_consignor back to false.
+    // ensure the is_Consignor switch reflects this if needed.
+    // Check if bankDetails are still null. If so, set is_Consignor back to false.
     if (!bankDetails) {
-      form.setValue("is_consignor", false, { shouldValidate: true });
+      form.setValue("is_Consignor", false, { shouldValidate: true });
     }
   };
 
@@ -330,7 +330,7 @@ export function AddClientModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                 <FormField
                   control={form.control}
-                  name="is_consignor"
+                  name="is_Consignor"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                       <div className="space-y-0.5">
