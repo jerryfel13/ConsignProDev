@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis, ResponsiveContainer } from "recharts";
 
 import {
   ChartContainer,
@@ -64,39 +64,62 @@ export function Overview() {
           color: "hsl(var(--chart-3))",
         },
       }}
-      className="h-[300px]"
+      className="h-[300px] w-full"
     >
       <BarChart
         data={data}
         margin={{
           top: 16,
-          right: 16,
-          bottom: 0,
-          left: 0,
+          right: 24,
+          bottom: 16,
+          left: 24,
         }}
       >
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="name" tickLine={false} axisLine={false} />
-        <YAxis tickLine={false} axisLine={false} />
+        <XAxis 
+          dataKey="name" 
+          tickLine={false} 
+          axisLine={false}
+          fontSize={11}
+          tickMargin={8}
+        />
+        <YAxis 
+          tickLine={false} 
+          axisLine={false}
+          fontSize={11}
+          width={35}
+          tickMargin={8}
+        />
         <ChartTooltip content={<ChartTooltipContent />} />
-        <Legend verticalAlign="top" height={36} />
+        <Legend 
+          verticalAlign="top" 
+          height={36}
+          wrapperStyle={{
+            fontSize: '11px',
+            paddingBottom: '8px',
+            paddingTop: '4px'
+          }}
+        />
         <Bar
           dataKey="clients"
           name="Clients"
           fill="var(--color-clients)"
           radius={[4, 4, 0, 0]}
+          maxBarSize={40}
         />
         <Bar
           dataKey="consignments"
           name="Consignments"
           fill="var(--color-consignments)"
           radius={[4, 4, 0, 0]}
+          maxBarSize={40}
         />
         <Bar
           dataKey="purchasedItems"
           name="Purchased Items"
           fill="var(--color-purchasedItems)"
           radius={[4, 4, 0, 0]}
+          maxBarSize={40}
         />
       </BarChart>
     </ChartContainer>

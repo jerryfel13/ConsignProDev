@@ -122,26 +122,19 @@ export function SiteHeader() {
         className="sticky top-0 z-40 w-full border-b"
         style={{ backgroundColor: "#989081" }}
       >
-        <div className="container flex h-16 items-center px-0 sm:px-0 lg:px-0">
+        <div className="flex h-16 items-center w-full px-2 md:px-4">
           <MainNav />
-          <div className="flex items-center gap-4 ml-auto">
-            <div className="relative w-full max-w-[200px] sm:max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search..."
-                className="pl-8 h-9 bg-white/90 border-0 text-gray-900 placeholder:text-gray-500 rounded-md"
-              />
-            </div>
+          <div className="flex items-center ml-auto">
             {loading ? (
-              <div className="h-10 w-24 bg-muted/20 rounded-full animate-pulse"></div>
+              <div className="h-8 w-8 md:h-10 md:w-24 bg-muted/20 rounded-full animate-pulse"></div>
             ) : user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="relative h-10 w-auto px-2 space-x-2 rounded-full hover:bg-muted/10 mr-0"
+                    className="relative h-8 md:h-10 w-auto px-0 md:px-2 space-x-0 md:space-x-2 rounded-full hover:bg-muted/10"
                   >
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-7 w-7 md:h-8 md:w-8">
                       <AvatarImage
                         src={user.imageUrl ?? undefined}
                         alt={user.name ?? "User"}
@@ -154,7 +147,7 @@ export function SiteHeader() {
                           .toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="text-left hidden sm:block pr-0">
+                    <div className="text-left hidden sm:block">
                       <p className="text-sm font-medium leading-none text-black">
                         {user.name ?? "-"}
                       </p>
@@ -165,8 +158,9 @@ export function SiteHeader() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
-                  className="w-56 dropdown-menu-content"
+                  className="w-[calc(100vw-1rem)] sm:w-56 dropdown-menu-content"
                   align="end"
+                  sideOffset={8}
                   forceMount
                 >
                   <DropdownMenuLabel className="font-normal">
