@@ -60,6 +60,14 @@ export function MainNav() {
                 Consignments
               </Link>
               <Link
+                href="/products"
+                className="flex items-center text-lg font-medium text-white transition-colors hover:text-white/80"
+                onClick={() => setIsOpen(false)}
+              >
+                <Boxes className="mr-2 h-5 w-5" />
+                Products
+              </Link>
+              <Link
                 href="/reports"
                 className="flex items-center text-lg font-medium text-white transition-colors hover:text-white/80"
                 onClick={() => setIsOpen(false)}
@@ -95,6 +103,13 @@ export function MainNav() {
         >
           <Package className="mr-1 h-4 w-4" />
           Consignments
+        </Link>
+        <Link
+          href="/products"
+          className="flex items-center text-sm font-medium text-white transition-colors hover:text-white/80"
+        >
+          <Boxes className="mr-1 h-4 w-4" />
+          Products
         </Link>
       </nav>
     </div>

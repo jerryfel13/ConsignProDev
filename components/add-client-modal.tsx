@@ -44,6 +44,7 @@ const formSchema = z.object({
     .min(1, "Last name is required")
     .max(100, "Last name must be at most 100 characters"),
   suffix: z.string().max(10, "Suffix must be at most 10 characters").optional(),
+  birth_date: z.string().min(1, "Birth date is required"),
   email: z
     .string()
     .email("Please enter a valid email address")
@@ -61,7 +62,7 @@ const formSchema = z.object({
     .string()
     .max(100, "Facebook profile must be at most 100 characters")
     .optional(),
-  is_Consignor: z.boolean().default(false),
+  is_consignor: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -93,12 +94,13 @@ export function AddClientModal({
       middle_name: "",
       last_name: "",
       suffix: "",
+      birth_date: "",
       email: "",
       contact_no: "",
       address: "",
       instagram: "",
       facebook: "",
-      is_Consignor: false,
+      is_consignor: false,
     },
   });
 
@@ -159,7 +161,7 @@ export function AddClientModal({
     // ensure the is_Consignor switch reflects this if needed.
     // Check if bankDetails are still null. If so, set is_Consignor back to false.
     if (!bankDetails) {
-      form.setValue("is_Consignor", false, { shouldValidate: true });
+      form.setValue("is_consignor", false, { shouldValidate: true });
     }
   };
 
@@ -238,6 +240,25 @@ export function AddClientModal({
                       <FormLabel>Suffix (Optional)</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter suffix" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="birth_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Birth Date <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          placeholder="MM-DD-YYYY"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -330,7 +351,7 @@ export function AddClientModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                 <FormField
                   control={form.control}
-                  name="is_Consignor"
+                  name="is_consignor"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                       <div className="space-y-0.5">
@@ -340,11 +361,11 @@ export function AddClientModal({
                         <Switch
                           checked={field.value}
                           onCheckedChange={(checked) => {
-                            field.onChange(checked); // Update the form field value
+                            field.onChange(checked);
                             if (checked) {
-                              setShowBankModal(true); // Open bank modal only if checked is true
+                              setShowBankModal(true);
                             } else {
-                              setBankDetails(null); // Clear bank details if unchecked
+                              setBankDetails(null);
                             }
                           }}
                         />

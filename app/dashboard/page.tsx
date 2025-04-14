@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RecentClients } from "@/components/recent-clients";
 import { RecentConsignments } from "@/components/recent-consignments";
 import { Overview } from "@/components/overview";
+import { ProductAnalytics } from "@/components/product-analytics";
 
 // Utility function to format currency in PHP
 const formatCurrency = (amount: number) => {
@@ -80,6 +81,14 @@ export default function Home() {
           </Card>
         </div>
         <div className="grid gap-4">
+          <Card className="col-span-full overflow-hidden">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle>Product Analytics</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <ProductAnalytics />
+            </CardContent>
+          </Card>
           <Card className="col-span-full overflow-hidden">
             <CardHeader className="px-4 sm:px-6">
               <CardTitle>Overview</CardTitle>
