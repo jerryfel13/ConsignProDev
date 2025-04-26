@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, Package, Users, Boxes } from "lucide-react";
+import { Menu, Package, Users, Boxes, Warehouse, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -31,56 +31,65 @@ export function MainNav() {
               </Button>
             </SheetTrigger>
             <SheetContent
-            side="left"
-            className="w-[250px] bg-[#989081] border-r-0 pt-10 text-white"
-          >
-            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-            <nav className="flex flex-col gap-4">
-              <Link
-                href="/"
-                className="flex items-center text-lg font-medium text-white transition-colors hover:text-white/80"
-                onClick={() => setIsOpen(false)}
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/clients"
-                className="flex items-center text-lg font-medium text-white transition-colors hover:text-white/80"
-                onClick={() => setIsOpen(false)}
-              >
-                <Users className="mr-2 h-5 w-5" />
-                Clients
-              </Link>
-              <Link
-                href="/consignments"
-                className="flex items-center text-lg font-medium text-white transition-colors hover:text-white/80"
-                onClick={() => setIsOpen(false)}
-              >
-                <Package className="mr-2 h-5 w-5" />
-                Consignments
-              </Link>
-              <Link
-                href="/products"
-                className="flex items-center text-lg font-medium text-white transition-colors hover:text-white/80"
-                onClick={() => setIsOpen(false)}
-              >
-                <Boxes className="mr-2 h-5 w-5" />
-                Products
-              </Link>
-              <Link
-                href="/reports"
-                className="flex items-center text-lg font-medium text-white transition-colors hover:text-white/80"
-                onClick={() => setIsOpen(false)}
-              >
-                Reports
-              </Link>
-            </nav>
-          </SheetContent>
+              side="left"
+              className="w-[250px] bg-[#989081] border-r-0 pt-10 text-white"
+            >
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+              <nav className="flex flex-col gap-4">
+                <Link
+                  href="/"
+                  className="flex items-center text-lg font-medium text-white transition-colors hover:text-white/80"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/clients"
+                  className="flex items-center text-lg font-medium text-white transition-colors hover:text-white/80"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Users className="mr-2 h-5 w-5" />
+                  Clients
+                </Link>
+                <Link
+                  href="/consignments"
+                  className="flex items-center text-lg font-medium text-white transition-colors hover:text-white/80"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Package className="mr-2 h-5 w-5" />
+                  Consignments
+                </Link>
+               
+                <Link
+                  href="/inventory"
+                  className="flex items-center text-lg font-medium text-white transition-colors hover:text-white/80"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Warehouse className="mr-2 h-5 w-5" />
+                  Inventory
+                </Link>
+                <Link
+                  href="/sales"
+                  className="flex items-center text-lg font-medium text-white transition-colors hover:text-white/80"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <ShoppingCart className="mr-2 h-5 w-5" />
+                  Sales
+                </Link>
+                <Link
+                  href="/reports"
+                  className="flex items-center text-lg font-medium text-white transition-colors hover:text-white/80"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Reports
+                </Link>
+              </nav>
+            </SheetContent>
           </Sheet>
         </div>
         <Link href="/" className="flex items-center space-x-2 text-white ml-6">
           <Package className="h-6 w-6" />
-          <span className="inline-block font-bold">CRCMS</span>
+          <span className="inline-block font-bold">LWPH-SIMS</span>
         </Link>
       </div>
       <nav className="hidden md:flex md:gap-6">
@@ -104,12 +113,20 @@ export function MainNav() {
           <Package className="mr-1 h-4 w-4" />
           Consignments
         </Link>
+       
         <Link
-          href="/products"
+          href="/inventory"
           className="flex items-center text-sm font-medium text-white transition-colors hover:text-white/80"
         >
-          <Boxes className="mr-1 h-4 w-4" />
-          Products
+          <Warehouse className="mr-1 h-4 w-4" />
+          Inventory
+        </Link>
+        <Link
+          href="/sales"
+          className="flex items-center text-sm font-medium text-white transition-colors hover:text-white/80"
+        >
+          <ShoppingCart className="mr-1 h-4 w-4" />
+          Sales
         </Link>
       </nav>
     </div>

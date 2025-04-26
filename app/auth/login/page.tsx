@@ -51,7 +51,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-3xl font-bold">CRCMS</CardTitle>
+          <CardTitle className="text-3xl font-bold">LWPH-SIMS</CardTitle>
           <CardDescription>
             Enter your email to receive a verification code.
           </CardDescription>

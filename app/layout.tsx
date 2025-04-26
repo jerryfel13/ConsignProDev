@@ -7,7 +7,7 @@ import { Toaster } from "@/components/toaster";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Client Consignment System",
+  title: "LWPH-SIMS",
   description: "A system for managing client consignments",
 };
 
