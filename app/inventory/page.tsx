@@ -33,6 +33,7 @@ import {
   DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { ItemsTable } from "@/components/items-table";
 
 export default function InventoryPage() {
   const [activeTab, setActiveTab] = useState("all");
@@ -41,6 +42,39 @@ export default function InventoryPage() {
   const lowStockCount = "N/A";
   const expiredCount = "N/A";
   const allItemsCount = 0;
+
+  // Sample consignment data mapped to Item interface
+  const consignmentItems = [
+    {
+      id: "1",
+      brand: "Louis Vuitton",
+      model: "Neverfull MM",
+      code: "LV-NF-001",
+      color: "Damier Ebene",
+      size: "MM",
+      inclusions: ["Box", "Dust Bag", "Authentication Card"],
+      documents: [],
+      status: "Active",
+      clientName: "Jane Doe",
+      isConsigned: true,
+      purchaseDate: new Date("2023-04-15"),
+    },
+    {
+      id: "2",
+      brand: "Rolex",
+      model: "Datejust 41",
+      code: "RLX-DJ-002",
+      color: "Silver",
+      size: "41mm",
+      inclusions: ["Box", "Papers", "Warranty Card"],
+      documents: [],
+      status: "Active",
+      clientName: "Robert Johnson",
+      isConsigned: true,
+      purchaseDate: new Date("2023-04-10"),
+    },
+    // ...add more mapped consignment items as needed
+  ];
 
   return (
     <>
@@ -67,12 +101,6 @@ export default function InventoryPage() {
                      <Plus className="mr-2 h-4 w-4" /> Add item manually
                    </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem disabled>
-                  <Upload className="mr-2 h-4 w-4" /> Import item
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled>
-                  <ScanLine className="mr-2 h-4 w-4" /> Scan barcode
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -95,15 +123,6 @@ export default function InventoryPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{lowStockCount}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Expired Items</CardTitle>
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{expiredCount}</div>
             </CardContent>
           </Card>
         </div>
@@ -142,7 +161,7 @@ export default function InventoryPage() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Filter by</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem>Status</DropdownMenuItem>
+                      <DropdownMenuItem>Consigned Products</DropdownMenuItem>
                       <DropdownMenuItem>Category</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -165,34 +184,12 @@ export default function InventoryPage() {
               </div>
 
               <TabsContent value="all" className="mt-4">
-                {allItemsCount === 0 ? (
-                  <div className="flex flex-col items-center justify-center text-center py-16">
-                    <div className="mb-4 rounded-full bg-muted p-4">
-                      <Package2 className="h-16 w-16 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2">Your products & services show up here</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Click the Add Item button below to add product & services
-                    </p>
-                    <Button asChild>
-                      <Link href="/inventory/new">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add Item
-                      </Link>
-                    </Button>
-                  </div>
-                ) : (
-                  <div>
-                    <p>Inventory items table will go here.</p>
-                  </div>
-                )}
+                <ItemsTable data={consignmentItems} />
               </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
-
-        <div className="text-center text-sm text-muted-foreground mt-4">
-          You can also <Link href="#" className="underline">import</Link> your items or check our <Link href="#" className="underline">items tutorial</Link>.
-        </div>
+      
       </div>
     </>
   );

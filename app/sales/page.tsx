@@ -36,13 +36,9 @@ export default function SalesPage() {
 
         <Tabs defaultValue="all">
           <TabsList className="mb-4 overflow-x-auto justify-start">
-            {/* Add more tab triggers as needed */}
+            {/* Only show 'All' and 'Consigned' tabs for filtering */}
             <TabsTrigger value="all">All (0)</TabsTrigger>
-            <TabsTrigger value="not-paid">Not Paid (0)</TabsTrigger>
-            <TabsTrigger value="overdue">Overdue (0)</TabsTrigger>
-            <TabsTrigger value="paid">Paid (0)</TabsTrigger>
-            <TabsTrigger value="cancelled">Cancelled (0)</TabsTrigger>
-            <TabsTrigger value="draft">Draft (0)</TabsTrigger>
+            <TabsTrigger value="consigned">Consigned (0)</TabsTrigger>
           </TabsList>
 
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
@@ -55,10 +51,6 @@ export default function SalesPage() {
               />
             </div>
             <div className="flex gap-2">
-              <Button variant="outline">
-                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                Filter
-              </Button>
               <Select defaultValue="most-recent">
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Sort by" />
@@ -89,11 +81,19 @@ export default function SalesPage() {
                   <Button variant="outline">Create Receipt</Button>
                 </Link>
               </div>
-            
             </div>
           </TabsContent>
-          {/* Add TabsContent for other statuses here */}
-          {/* e.g., <TabsContent value="not-paid">Content for Not Paid</TabsContent> */}
+          <TabsContent value="consigned">
+            <div className="flex flex-col items-center justify-center text-center py-16 px-4 border border-dashed rounded-lg bg-slate-50">
+              <div className="mb-4 p-4 rounded-full bg-blue-100">
+                <FileText className="h-10 w-10 text-blue-600" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Sold Consigned Items</h2>
+              <p className="text-muted-foreground mb-6 max-w-sm">
+                This tab will show all sold consigned items.
+              </p>
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
     </div>

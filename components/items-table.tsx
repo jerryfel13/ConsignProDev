@@ -189,13 +189,14 @@ const columns: ColumnDef<Item>[] = [
 ];
 
 interface ItemsTableProps {
+  data: Item[];
   initialFilter?: {
     status?: "Active" | "Archived" | "Returned";
     clientName?: string;
   };
 }
 
-export function ItemsTable({ initialFilter }: ItemsTableProps) {
+export function ItemsTable({ data, initialFilter }: ItemsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState({});
@@ -218,7 +219,7 @@ export function ItemsTable({ initialFilter }: ItemsTableProps) {
   }, [initialFilter]);
 
   const table = useReactTable({
-    data: [], // TODO: Replace with actual data
+    data,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,

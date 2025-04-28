@@ -16,11 +16,9 @@ export default function CreateReceiptPage() {
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2">
           <Link href="/sales" className="text-lg font-medium">← Create Receipt</Link>
-          <span className="text-xs text-muted-foreground ml-2">Add or modify business logo, address, and contact details <a href="#" className="text-blue-600 underline">here</a></span>
         </div>
         <div className="flex gap-2 items-center">
           <Button variant="ghost" size="icon"><Eye /></Button>
-          <Button variant="outline">Send via ▼</Button>
           <Button>Save</Button>
         </div>
       </div>
@@ -33,10 +31,6 @@ export default function CreateReceiptPage() {
               <div className="font-medium mb-2">Billed To</div>
               <Button variant="link" className="p-0 h-auto text-blue-600"><Plus className="inline-block mr-1" size={18}/>Add client</Button>
             </div>
-            <div>
-              <div className="font-medium mb-2">Shipped To</div>
-              <Button variant="link" className="p-0 h-auto text-blue-600"><Plus className="inline-block mr-1" size={18}/>Add shipping address</Button>
-            </div>
           </div>
           <div className="mb-6">
             <div className="font-medium mb-2">Item</div>
@@ -48,8 +42,6 @@ export default function CreateReceiptPage() {
                 <span className="font-medium">Subtotal (PHP)</span>
                 <span className="font-semibold">₱0.00</span>
               </div>
-              <Button variant="link" className="p-0 h-auto text-blue-600"><Plus className="inline-block mr-1" size={18}/>Add discount</Button>
-              <Button variant="link" className="p-0 h-auto text-blue-600"><Plus className="inline-block mr-1" size={18}/>Add shipping fee</Button>
             </div>
           </div>
           <div className="flex items-center justify-between text-lg font-semibold mb-6">
@@ -68,10 +60,6 @@ export default function CreateReceiptPage() {
             <div className="mb-4">
               <label className="block text-sm mb-1">Date issued</label>
               <Input type="text" value="April 24, 2025" readOnly className="cursor-pointer" />
-            </div>
-            <div>
-              <label className="block text-sm mb-1">Currency</label>
-              <Input type="text" value="Philippines Peso - PHP" readOnly />
             </div>
           </div>
           <div className="bg-white rounded-lg shadow-sm p-6">
