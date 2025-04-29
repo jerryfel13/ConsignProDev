@@ -1,3 +1,5 @@
+"use client";
+export const dynamic = "force-dynamic";
 import { ItemsTabs } from "@/components/items-tabs";
 
 export default function ItemsPage() {
