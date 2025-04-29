@@ -3,57 +3,95 @@
 import { useState, useEffect } from "react";
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer, toast } from 'react-toastify';
+import { useRouter } from 'next/navigation';
+import axios from 'axios';
 
 // Mock user data - replace with actual authentication implementation
-interface User {
-  name: string;
+interface UserData {
+  external_id: string;
+  first_name: string;
+  last_name: string;
   email: string;
-  imageUrl: string | null;
-  role: string;
-  is_admin?: boolean; // Added is_admin property
+  is_active: boolean;
+  created_at: string;
+  last_login: string;
 }
+
+const mockUser: UserData = {
+  external_id: "123",
+  first_name: "John",
+  last_name: "Doe",
+  email: "john@example.com",
+  is_active: true,
+  created_at: new Date().toISOString(),
+  last_login: new Date().toISOString()
+};
 
 /**
  * Basic auth hook that returns mock user data.
  * TODO: Replace with real authentication logic
  */
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<UserData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    // Simulate loading user data
-    const checkAuth = setTimeout(() => {
-      // Check if user is logged in based on localStorage
-      const isAuthenticated = localStorage.getItem("isAuthenticated");
-      
-      if (isAuthenticated) {
-        // Mock user data - replace with actual API call
-        setUser({
-          name: "Admin user",
-          email: "admin@example.com",
-          imageUrl: null,
-          role: "Admin",
-          is_admin: true, // Set is_admin to true for testing
-        });
-      } else {
-        setUser(null);
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("userData");
+    const userEmail = localStorage.getItem("userEmail");
+
+    if (!token || !userData || !userEmail) {
+      router.push("/auth/login");
+      return;
+    }
+
+    try {
+      setUser(JSON.parse(userData));
+    } catch (error) {
+      console.error("Error parsing user data:", error);
+      router.push("/auth/login");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [router]);
+
+  const logout = async () => {
+    // Remove confirmation dialog, just perform logout
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("No token found");
       }
+
+      // Call the logout API
+      await axios.post('/api/auth/logout', {}, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      // Clear local storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("userData");
+      localStorage.removeItem("userEmail");
+
+      // Show success message
+      toast.success("Logged out successfully");
+
+      // Redirect to login page
+      router.push("/auth/login");
+    } catch (error: any) {
+      console.error("Logout error:", error);
+      const errorMessage = error.response?.data?.message || "Failed to logout";
+      toast.error(errorMessage);
       
-      setLoading(false);
-    }, 500);
-
-    return () => clearTimeout(checkAuth);
-  }, []);
-
-  // Function to handle logout - no router, just local state
-  const logout = () => {
-    // Clear all authentication data
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("userEmail");
-    // Reset user state
-    setUser(null);
-    console.log("User logged out"); // Add logging to help debug
+      // Even if the API call fails, we should still clear local storage and redirect
+      localStorage.removeItem("token");
+      localStorage.removeItem("userData");
+      localStorage.removeItem("userEmail");
+      router.push("/auth/login");
+    }
   };
 
   // Function for sending OTP
@@ -85,11 +123,13 @@ export function useAuth() {
           
           // Set user data after successful verification
           setUser({
-            name: "Admin User",
+            external_id: "123",
+            first_name: "Admin",
+            last_name: "User",
             email: email || localStorage.getItem("userEmail") || "user@example.com",
-            imageUrl: null,
-            role: "Admin",
-            is_admin: true, // Set is_admin to true for testing
+            is_active: true,
+            created_at: new Date().toISOString(),
+            last_login: new Date().toISOString()
           });
           
           resolve();
@@ -103,22 +143,24 @@ export function useAuth() {
   // Function for demonstration login
   const login = (credentials: { email: string; password: string }) => {
     // Mock login - replace with actual API call
-    setLoading(true);
+    setIsLoading(true);
     return new Promise<void>((resolve, reject) => {
       setTimeout(() => {
         if (credentials.email && credentials.password) {
           localStorage.setItem("isAuthenticated", "true");
           setUser({
-            name: "Admin User",
+            external_id: "123",
+            first_name: "Admin",
+            last_name: "User",
             email: credentials.email,
-            imageUrl: null,
-            role: "Admin",
-            is_admin: true, // Set is_admin to true for testing
+            is_active: true,
+            created_at: new Date().toISOString(),
+            last_login: new Date().toISOString()
           });
-          setLoading(false);
+          setIsLoading(false);
           resolve();
         } else {
-          setLoading(false);
+          setIsLoading(false);
           reject(new Error("Invalid credentials"));
         }
       }, 1000);
@@ -127,7 +169,7 @@ export function useAuth() {
 
   return {
     user,
-    loading,
+    isLoading,
     login,
     logout,
     sendOtp,

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Save } from "lucide-react";
+import axios from "axios";
+import { toast } from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { BankDetailsModal } from "@/components/bank-details-modal"; // Assuming this is correctly located
+import { clientApi } from "@/lib/api";
 
 // Define the form schema (updated)
 const formSchema = z.object({
@@ -107,36 +110,97 @@ export function AddClientModal({
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
 
-    // Include bank details if they exist
-    const submissionData = {
-      ...values,
-      bank_details: bankDetails, // Add bank details to the submission
-    };
-
-    console.log("Submitting new client:", submissionData);
-
-    // Replace with your actual API call
     try {
-      // const response = await fetch('/api/clients', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(submissionData),
-      // });
-      // if (!response.ok) throw new Error('Failed to add client');
-      // const newClient = await response.json();
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
+      // Check for token
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("You are not authenticated. Please log in again.");
+        setIsSubmitting(false);
+        return;
+      }
+      // Optionally, check if token is expired (basic check for JWT)
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp && Date.now() >= payload.exp * 1000) {
+          toast.error("Session expired. Please log in again.");
+          setIsSubmitting(false);
+          return;
+        }
+      } catch (e) {
+        // If token is not a valid JWT, treat as invalid
+        toast.error("Invalid session. Please log in again.");
+        setIsSubmitting(false);
+        return;
+      }
 
+      // Only include bank if is_consignor is true
+      let bankField = undefined;
+      if (values.is_consignor) {
+        bankField = bankDetails
+          ? {
+              account_name: bankDetails.account_name,
+              account_no: bankDetails.account_no,
+              bank: bankDetails.bank,
+            }
+          : {};
+      }
+      // Get the logged-in user's external_id from localStorage
+      const userData = JSON.parse(localStorage.getItem("userData") || "{}");
+      const clientData = {
+        first_name: values.first_name,
+        middle_name: values.middle_name || "",
+        last_name: values.last_name,
+        suffix: values.suffix || "",
+        birth_date: values.birth_date,
+        email: values.email,
+        contact_no: values.contact_no || "",
+        address: values.address || "",
+        instagram: values.instagram || "",
+        facebook: values.facebook || "",
+        is_consignor: values.is_consignor,
+        bank: values.is_consignor
+          ? {
+              account_name: bankDetails?.account_name || "",
+              account_no: bankDetails?.account_no || "",
+              bank: bankDetails?.bank || ""
+            }
+          : null,
+        created_by: userData.external_id || "",
+      };
+      console.log("Submitting clientData:", clientData);
+
+      const response = await axios.post(
+        '/api/clients',
+        clientData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      
       // Reset form, close modal, and trigger callback
       form.reset();
       setBankDetails(null);
       onClose();
-      onClientAdded?.(); // Call the callback if provided
+      onClientAdded?.();
 
-      console.log("Client added successfully");
-      // Optionally show a success toast/notification here
-    } catch (error) {
+      console.log("Client added successfully:", response);
+      toast.success("Client added successfully!");
+    } catch (error: any) {
       console.error("Failed to submit client:", error);
-      // Handle error display to the user (e.g., show an error message in the modal)
+      if (error.response && error.response.data) {
+        console.error("API Error Data:", error.response.data);
+        const apiMessage =
+          error.response.data.status?.message ||
+          error.response.data.message ||
+          JSON.stringify(error.response.data) ||
+          "Unknown error";
+        toast.error(apiMessage);
+      } else {
+        toast.error("An unexpected error occurred.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -165,11 +229,13 @@ export function AddClientModal({
     }
   };
 
-  // Reset form state when the modal is closed externally
-  if (!isOpen && form.formState.isDirty) {
-    form.reset();
-    setBankDetails(null);
-  }
+  // Move reset logic into useEffect
+  useEffect(() => {
+    if (!isOpen && form.formState.isDirty) {
+      form.reset();
+      setBankDetails(null);
+    }
+  }, [isOpen, form, setBankDetails]);
 
   return (
     <>

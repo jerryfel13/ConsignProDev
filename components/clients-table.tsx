@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   type ColumnDef,
@@ -47,30 +47,6 @@ import { ItemForm } from "@/components/item-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddClientModal } from "./add-client-modal";
 
-// For the purpose of this example, let's define the data directly here to ensure Consignor status is correct
-const clientsData = [
-  {
-    id: "1",
-    name: "Jane Doe",
-    email: "jane.doe@example.com",
-    phone: "(555) 123-4567",
-    status: "Active",
-    isConsignor: true,
-    consignments: 3,
-    totalValue: "12500.00",
-  },
-  {
-    id: "2",
-    name: "John Smith",
-    email: "john.smith@example.com",
-    phone: "(555) 987-6543",
-    status: "Active",
-    isConsignor: false,
-    consignments: 0,
-    totalValue: "8300.00",
-  },
-];
-
 // Utility function to format currency in PHP
 const formatCurrency = (amount: string | number) => {
   // If amount is a string with currency symbol, convert to number
@@ -87,7 +63,7 @@ const formatCurrency = (amount: string | number) => {
   }).format(numericValue);
 };
 
-const columns: ColumnDef<(typeof clientsData)[0]>[] = [
+const columns: ColumnDef<any>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -280,7 +256,10 @@ const columns: ColumnDef<(typeof clientsData)[0]>[] = [
 ];
 
 export function ClientsTable() {
-  // Keep the state management here
+  // State for fetched clients, loading, and error
+  const [clients, setClients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState({});
@@ -290,8 +269,42 @@ export function ClientsTable() {
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  useEffect(() => {
+    const fetchClients = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/clients", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const data = await res.json();
+        if (data.status?.success) {
+          setClients(
+            data.data.map((c: any) => ({
+              id: c.external_id,
+              name: `${c.first_name} ${c.last_name}`,
+              email: c.email,
+              phone: c.contact_no || "",
+              status: c.is_active ? "Active" : "Inactive",
+              isConsignor: c.is_consignor || false,
+              consignments: c.consignments_count || 0, // if available
+              totalValue: c.total_value || "", // if available
+            }))
+          );
+        } else {
+          setError(data.status?.message || "Failed to fetch clients");
+        }
+      } catch (err) {
+        setError("Failed to fetch clients");
+      }
+      setLoading(false);
+    };
+    fetchClients();
+  }, []);
+
   const table = useReactTable({
-    data: clientsData,
+    data: clients,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -313,9 +326,9 @@ export function ClientsTable() {
   });
 
   const handleClientAdded = () => {
+    // Optionally, refetch clients here after adding
+    // For now, just log
     console.log("New client added, refresh data here.");
-    // In a real app, you would refetch the clientsData or trigger a state update
-    // Example: refetchClients();
   };
 
   return (
@@ -325,6 +338,8 @@ export function ClientsTable() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          {loading && <div>Loading clients...</div>}
+          {error && <div className="text-red-500">{error}</div>}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <Select

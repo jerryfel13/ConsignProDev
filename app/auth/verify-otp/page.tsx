@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MailCheck } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-
+import axios from "axios";
+import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,7 +25,7 @@ import {
 function maskEmail(email: string | null): string {
   if (!email) return "your email";
   const [localPart, domain] = email.split("@");
-  if (!localPart || !domain || localPart.length < 3) return email; // Basic check
+  if (!localPart || !domain || localPart.length < 3) return email;
   return `${localPart.substring(0, 1)}**********${localPart.substring(
     localPart.length - 1
   )}@${domain}`;
@@ -45,31 +45,29 @@ export default function VerifyOtpPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const router = useRouter();
-  const [timer, setTimer] = useState(300); // 5 minutes in seconds
+  const [timer, setTimer] = useState(300); // 5 minutes timer
   const [canResend, setCanResend] = useState(false);
-  const [isResending, setIsResending] = useState(false); // State for resend loading
-  const { verifyOtp, sendOtp } = useAuth();
+  const [isResending, setIsResending] = useState(false);
+  const router = useRouter();
 
-  // Get email from localStorage on component mount
   useEffect(() => {
-    const storedEmail = localStorage.getItem("userEmail");
-    setUserEmail(storedEmail);
-  }, []);
-
-  // Timer logic
-  useEffect(() => {
-    if (timer <= 0) {
-      setCanResend(true);
+    const email = localStorage.getItem("userEmail");
+    if (!email) {
+      router.push("/auth/login");
       return;
     }
+    setUserEmail(email);
+  }, [router]);
 
-    const intervalId = setInterval(() => {
-      setTimer((prevTimer) => prevTimer - 1);
-    }, 1000);
-
-    // Cleanup interval on component unmount or when timer reaches 0
-    return () => clearInterval(intervalId);
+  useEffect(() => {
+    if (timer > 0) {
+      const interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+      return () => clearInterval(interval);
+    } else {
+      setCanResend(true);
+    }
   }, [timer]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -78,11 +76,33 @@ export default function VerifyOtpPage() {
     setIsLoading(true);
 
     try {
-      await verifyOtp(otp);
-      router.push("/dashboard"); // Redirect to dashboard after successful verification
-    } catch (err) {
-      setError("Invalid verification code. Please try again.");
-      setOtp(""); // Clear the OTP input
+      const response = await axios.post('/api/auth/verify-otp', {
+        email: userEmail,
+        otp: otp
+      });
+
+      if (response.data.status.success) {
+        // Store all required data
+        localStorage.setItem("token", response.data.access.token);
+        localStorage.setItem("userData", JSON.stringify(response.data.data));
+        localStorage.setItem("userEmail", response.data.data.email); // Store the email from the response
+        
+        // Show success toast
+        toast.success("OTP verified successfully! Redirecting to dashboard...");
+        
+        // Add a small delay before redirecting to show the toast
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 1500);
+      } else {
+        setError(response.data.status.message);
+        toast.error(response.data.status.message);
+      }
+    } catch (err: any) {
+      console.error("OTP verification error:", err);
+      const errorMessage = err.response?.data?.status?.message || "Failed to verify OTP. Please try again.";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -92,15 +112,37 @@ export default function VerifyOtpPage() {
     if (!canResend || isResending || !userEmail) return;
 
     setIsResending(true);
-    setError(""); // Clear previous errors
+    setError("");
 
     try {
-      await sendOtp(userEmail);
-      // Reset timer and resend state
-      setTimer(300);
-      setCanResend(false);
-    } catch (err) {
-      setError("Failed to resend OTP. Please try again.");
+      // Use the new resend endpoint
+      const response = await axios.post('/api/auth/login/resend', {
+        email: userEmail
+      });
+
+      if (response.data.status && response.data.status.success) {
+        setTimer(300);
+        setCanResend(false);
+        setOtp("");
+        toast.success("New OTP sent successfully!");
+      } else {
+        const msg = response.data.status?.message || response.data.message || "Failed to resend OTP.";
+        setError(msg);
+        toast.error(msg);
+      }
+    } catch (err: any) {
+      let errorMessage = "Failed to resend OTP. Please try again.";
+      if (err.response?.data?.status?.message) {
+        errorMessage = err.response.data.status.message;
+      } else if (err.response?.data?.message) {
+        if (Array.isArray(err.response.data.message)) {
+          errorMessage = err.response.data.message.join(" ");
+        } else {
+          errorMessage = err.response.data.message;
+        }
+      }
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsResending(false);
     }

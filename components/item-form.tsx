@@ -57,6 +57,13 @@ interface ItemFormProps {
     images?: string[];
     date_purchased?: Date;
     is_active?: boolean;
+    category?: string;
+    authenticator?: string;
+    cost?: number;
+    price?: number;
+    consignor_selling_price?: number;
+    quantity?: number;
+    minimum_quantity?: number;
   };
   onSubmit: (data: any) => void;
   clientId?: string;
@@ -93,6 +100,13 @@ export function ItemForm({
     date_purchased: initialData?.date_purchased || new Date(),
     is_active:
       initialData?.is_active !== undefined ? initialData.is_active : true,
+    category: initialData?.category || "",
+    authenticator: initialData?.authenticator || "",
+    cost: initialData?.cost || 0,
+    price: initialData?.price || 0,
+    consignor_selling_price: initialData?.consignor_selling_price || 0,
+    quantity: initialData?.quantity || 0,
+    minimum_quantity: initialData?.minimum_quantity || 0,
   });
 
   const [displayPrice, setDisplayPrice] = useState("");
@@ -102,6 +116,11 @@ export function ItemForm({
 
   // State for the inclusion input field
   const [inclusionInput, setInclusionInput] = useState("");
+
+  // Add state for display values
+  const [costDisplay, setCostDisplay] = useState(formData.cost ? formatCurrency(formData.cost) : "");
+  const [priceDisplay, setPriceDisplay] = useState(formData.price ? formatCurrency(formData.price) : "");
+  const [consignorSellingDisplay, setConsignorSellingDisplay] = useState(formData.consignor_selling_price ? formatCurrency(formData.consignor_selling_price) : "");
 
   // Add a new inclusion
   const addInclusion = () => {
@@ -214,6 +233,23 @@ export function ItemForm({
     });
   };
 
+  // Handlers for live formatting
+  const handleCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = parseCurrencyInput(e.target.value);
+    setFormData({ ...formData, cost: raw });
+    setCostDisplay(e.target.value === "" ? "" : raw ? formatCurrency(raw) : "");
+  };
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = parseCurrencyInput(e.target.value);
+    setFormData({ ...formData, price: raw });
+    setPriceDisplay(e.target.value === "" ? "" : raw ? formatCurrency(raw) : "");
+  };
+  const handleConsignorSellingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = parseCurrencyInput(e.target.value);
+    setFormData({ ...formData, consignor_selling_price: raw });
+    setConsignorSellingDisplay(e.target.value === "" ? "" : raw ? formatCurrency(raw) : "");
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -269,15 +305,52 @@ export function ItemForm({
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Select
+                onValueChange={(value) => setFormData({ ...formData, category: value })}
+                value={formData.category || ""}
+              >
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bags">Bags</SelectItem>
+                  <SelectItem value="shoes">Shoes</SelectItem>
+                  {/* Add more categories or a button to manage categories */}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="brand">Brand</Label>
-              <Input
-                id="brand"
-                value={formData.brand}
-                onChange={(e) =>
-                  setFormData({ ...formData, brand: e.target.value })
-                }
-                maxLength={100}
-              />
+              <Select
+                onValueChange={(value) => setFormData({ ...formData, brand: value })}
+                value={formData.brand || ""}
+              >
+                <SelectTrigger id="brand">
+                  <SelectValue placeholder="Select brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gucci">Gucci</SelectItem>
+                  <SelectItem value="lv">Louis Vuitton</SelectItem>
+                  {/* Add more brands or a button to manage brands */}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="authenticator">Authenticator</Label>
+              <Select
+                onValueChange={(value) => setFormData({ ...formData, authenticator: value })}
+                value={formData.authenticator || ""}
+              >
+                <SelectTrigger id="authenticator">
+                  <SelectValue placeholder="Select authenticator" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bababebi">Bababebi</SelectItem>
+                  <SelectItem value="zeko">Zeko</SelectItem>
+                  {/* Add more authenticators or a button to manage authenticators */}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="model">Model</Label>
@@ -336,6 +409,58 @@ export function ItemForm({
                   })
                 }
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cost">Cost</Label>
+              <Input
+                id="cost"
+                value={costDisplay}
+                onChange={handleCostChange}
+                placeholder="0.00"
+                inputMode="decimal"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="price">Price</Label>
+              <Input
+                id="price"
+                value={priceDisplay}
+                onChange={handlePriceChange}
+                placeholder="0.00"
+                inputMode="decimal"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="consignor_selling_price">Consignor Selling Price</Label>
+              <Input
+                id="consignor_selling_price"
+                value={consignorSellingDisplay}
+                onChange={handleConsignorSellingChange}
+                placeholder="0.00"
+                inputMode="decimal"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="quantity">Quantity</Label>
+              <Input
+                id="quantity"
+                type="number"
+                value={formData.quantity !== undefined ? formData.quantity : ""}
+                onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                min={0}
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="minimum_quantity">Minimum Quantity</Label>
+              <Input
+                id="minimum_quantity"
+                type="number"
+                value={formData.minimum_quantity !== undefined ? formData.minimum_quantity : ""}
+                onChange={(e) => setFormData({ ...formData, minimum_quantity: Number(e.target.value) })}
+                min={0}
+                placeholder="0"
               />
             </div>
           </div>

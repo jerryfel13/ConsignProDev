@@ -12,7 +12,8 @@ import {
   Repeat,
   Users,
 } from "lucide-react";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +40,7 @@ import { useAuth } from "@/hooks/useAuth"; // Assuming you have an auth hook
 
 export function SiteHeader() {
   const router = useRouter();
-  const { user, loading, logout } = useAuth();
+  const { user, isLoading, logout } = useAuth();
   const [showBackdrop, setShowBackdrop] = useState(false);
 
   const handleLogout = () => {
@@ -80,12 +81,15 @@ export function SiteHeader() {
             No
           </button>
           <button
-            onClick={() => {
+            onClick={async () => {
               toast.dismiss(toastId);
               setShowBackdrop(false);
-              logout();
-              localStorage.removeItem("isAuthenticated");
-              router.push("/auth/login");
+              try {
+                await logout();
+                router.push("/auth/login");
+              } catch (error) {
+                console.error("Logout failed:", error);
+              }
             }}
             className="flex-1 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
           >
@@ -125,7 +129,7 @@ export function SiteHeader() {
         <div className="flex h-16 items-center w-full px-2 md:px-4">
           <MainNav />
           <div className="flex items-center ml-auto">
-            {loading ? (
+            {isLoading ? (
               <div className="h-8 w-8 md:h-10 md:w-24 bg-muted/20 rounded-full animate-pulse"></div>
             ) : user ? (
               <DropdownMenu>
@@ -136,11 +140,10 @@ export function SiteHeader() {
                   >
                     <Avatar className="h-7 w-7 md:h-8 md:w-8">
                       <AvatarImage
-                        src={user.imageUrl ?? undefined}
-                        alt={user.name ?? "User"}
+                        alt={user.first_name ?? "User"}
                       />
                       <AvatarFallback>
-                        {user.name
+                        {user.first_name
                           ?.split(" ")
                           .map((n: string) => n[0])
                           .join("")
@@ -149,10 +152,7 @@ export function SiteHeader() {
                     </Avatar>
                     <div className="text-left hidden sm:block">
                       <p className="text-sm font-medium leading-none text-black">
-                        {user.name ?? "-"}
-                      </p>
-                      <p className="text-xs leading-none text-black/80">
-                        {user.role ?? "-"}
+                        {user.first_name ?? "-"}
                       </p>
                     </div>
                   </Button>
@@ -166,7 +166,7 @@ export function SiteHeader() {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none text-black">
-                        {user.name ?? "User"}
+                        {user.first_name ?? "User"}
                       </p>
                       <p className="text-xs leading-none text-gray-500">
                         {user.email ?? "-"}
@@ -183,17 +183,6 @@ export function SiteHeader() {
                       <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
-                  {user.is_admin && (
-                    <DropdownMenuItem asChild className="dropdown-menu-item">
-                      <Link
-                        href="/admin/users"
-                        className="flex items-center text-black w-full"
-                      >
-                        <Users className="mr-2 h-4 w-4 text-gray-700" />
-                        <span>Manage Users</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleLogout}
@@ -208,6 +197,7 @@ export function SiteHeader() {
           </div>
         </div>
       </header>
+      <ToastContainer />
     </>
   );
 }

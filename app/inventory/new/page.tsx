@@ -96,11 +96,27 @@ const suggestedInclusions = [
   "Care Instructions",
 ];
 
+// Add currency formatting utilities
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "decimal",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+};
+const parseCurrencyInput = (value: string) => {
+  const numericValue = value.replace(/[^0-9.]/g, "");
+  return parseFloat(numericValue) || 0;
+};
+
 export default function AddNewItemPage() {
   const [itemType, setItemType] = useState("product");
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newInclusion, setNewInclusion] = useState("");
   const [inclusions, setInclusions] = useState<string[]>([]);
+  // Add display state for cost and price
+  const [costDisplay, setCostDisplay] = useState("");
+  const [priceDisplay, setPriceDisplay] = useState("");
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -159,6 +175,13 @@ export default function AddNewItemPage() {
       e.preventDefault();
       handleAddInclusion(newInclusion);
     }
+  };
+
+  const handleCostChange = (e) => {
+    const raw = parseCurrencyInput(e.target.value);
+    const formatted = raw ? formatCurrency(raw) : "";
+    setCostDisplay(formatted);
+    form.setValue("cost", raw);
   };
 
   return (
@@ -396,10 +419,11 @@ export default function AddNewItemPage() {
                         <FormItem>
                           <FormLabel>Cost*</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              onChange={e => field.onChange(e.target.valueAsNumber)}
+                            <Input
+                              value={costDisplay}
+                              onChange={handleCostChange}
+                              placeholder="0.00"
+                              inputMode="decimal"
                             />
                           </FormControl>
                           <FormMessage />
@@ -414,10 +438,15 @@ export default function AddNewItemPage() {
                         <FormItem>
                           <FormLabel>Price*</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              onChange={e => field.onChange(e.target.valueAsNumber)}
+                            <Input
+                              value={priceDisplay}
+                              onChange={e => {
+                                const raw = parseCurrencyInput(e.target.value);
+                                field.onChange(raw);
+                                setPriceDisplay(e.target.value === "" ? "" : raw ? formatCurrency(raw) : "");
+                              }}
+                              placeholder="0.00"
+                              inputMode="decimal"
                             />
                           </FormControl>
                           <FormMessage />

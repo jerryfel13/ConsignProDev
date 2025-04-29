@@ -85,7 +85,7 @@ export function MainNav() {
       </div>
       <nav className="hidden md:flex md:gap-6">
         <Link
-          href="/"
+          href="/dashboard"
           className="flex items-center text-sm font-medium text-white transition-colors hover:text-white/80"
         >
           Dashboard

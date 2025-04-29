@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import axios from "axios";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+const API_BASE_URL = "https://lwphsims-uat.up.railway.app";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -34,15 +37,20 @@ export default function LoginPage() {
         return;
       }
 
-      console.log("Simulating OTP send for:", email);
+      const response = await axios.post('/api/auth/login', {
+        email: email
+      });
 
-      localStorage.setItem("userEmail", email);
-
-      router.push("/auth/verify-otp");
-      return;
-    } catch (err) {
+      if (response.data.status.success) {
+        localStorage.setItem("userEmail", email);
+        router.push("/auth/verify-otp");
+      } else {
+        setError(response.data.status.message || "Failed to send verification code");
+      }
+    } catch (err: any) {
       console.error("Login/OTP Send error:", err);
-      setError("Failed to send verification code. Please try again.");
+      setError(err.response?.data?.status?.message || "Failed to send verification code. Please try again.");
+    } finally {
       setIsLoading(false);
     }
   };
