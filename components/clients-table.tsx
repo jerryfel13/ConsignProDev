@@ -46,6 +46,9 @@ import { ItemsTable } from "@/components/items-table";
 import { ItemForm } from "@/components/item-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddClientModal } from "./add-client-modal";
+import axios from "axios";
+
+const API_BASE_URL = 'https://lwphsims-uat.up.railway.app';
 
 // Utility function to format currency in PHP
 const formatCurrency = (amount: string | number) => {
@@ -75,7 +78,7 @@ const columns: ColumnDef<any>[] = [
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Select all"
       />
-    ),
+    ), 
     cell: ({ row }) => (
       <Checkbox
         checked={row.getIsSelected()}
@@ -255,11 +258,22 @@ const columns: ColumnDef<any>[] = [
   },
 ];
 
-export function ClientsTable() {
-  // State for fetched clients, loading, and error
-  const [clients, setClients] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  // Add other client properties as needed
+}
+
+interface ClientsTableProps {
+  initialClients: Client[];
+  error?: string;
+  loading?: boolean;
+}
+
+export function ClientsTable({ initialClients, error, loading = false }: ClientsTableProps) {
+  const [clients, setClients] = useState<Client[]>(initialClients);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState({});
@@ -270,38 +284,10 @@ export function ClientsTable() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    const fetchClients = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch("/api/clients", {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        const data = await res.json();
-        if (data.status?.success) {
-          setClients(
-            data.data.map((c: any) => ({
-              id: c.external_id,
-              name: `${c.first_name} ${c.last_name}`,
-              email: c.email,
-              phone: c.contact_no || "",
-              status: c.is_active ? "Active" : "Inactive",
-              isConsignor: c.is_consignor || false,
-              consignments: c.consignments_count || 0, // if available
-              totalValue: c.total_value || "", // if available
-            }))
-          );
-        } else {
-          setError(data.status?.message || "Failed to fetch clients");
-        }
-      } catch (err) {
-        setError("Failed to fetch clients");
-      }
-      setLoading(false);
-    };
-    fetchClients();
-  }, []);
+    setClients(initialClients);
+    // Log the initial clients data
+    console.log("Initial Clients Data:", initialClients);
+  }, [initialClients]);
 
   const table = useReactTable({
     data: clients,
@@ -325,21 +311,31 @@ export function ClientsTable() {
     },
   });
 
-  const handleClientAdded = () => {
-    // Optionally, refetch clients here after adding
-    // For now, just log
-    console.log("New client added, refresh data here.");
+  // Log the current table data whenever it changes
+  useEffect(() => {
+    console.log("Current Table Data:", table.getRowModel().rows.map(row => row.original));
+  }, [table.getRowModel().rows]);
+
+  const handleClientAdded = (newClient: Client) => {
+    setClients((prev) => [...prev, newClient]);
+    console.log("New Client Added:", newClient);
   };
+
+  if (error) {
+    return (
+      <div className="text-red-500 text-center p-4">
+        Error loading clients: {error}
+      </div>
+    );
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg sm:text-xl">Clients List</CardTitle>
+        <CardTitle className="text-lg sm:text-xl">Manage Clients</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {loading && <div>Loading clients...</div>}
-          {error && <div className="text-red-500">{error}</div>}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <Select
@@ -423,7 +419,16 @@ export function ClientsTable() {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows?.length ? (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                      <div className="flex flex-col items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                        <span className="text-muted-foreground">Loading clients...</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
                     <TableRow
                       key={row.id}
@@ -485,19 +490,6 @@ export function ClientsTable() {
       />
     </Card>
   );
-}
-
-export interface Client {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  status: "Active" | "Inactive";
-  isConsignor: boolean;
-  idNumber?: string;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface Transaction {

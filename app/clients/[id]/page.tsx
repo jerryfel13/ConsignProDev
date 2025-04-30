@@ -1,7 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect, use, useRef } from "react";
 import Link from "next/link";
+import axios from "axios";
+import { useRouter } from "next/navigation";
+import { toast, Toaster } from "react-hot-toast";
 import {
   ArrowLeft,
   Edit,
@@ -33,48 +36,48 @@ import { DataTable } from "@/components/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 
 // Function to get client data based on ID
-const getClientData = (id: string) => {
-  // For the example, we'll return different mock data based on ID
-  if (id === "1") {
-    return {
-      id: 1,
-      external_id: "CL001",
-      first_name: "Jane",
-      middle_name: "",
-      last_name: "Doe",
-      suffix: "",
-      email: "jane.doe@example.com",
-      contact_no: "+1 123-456-7890",
-      address: "123 Main Street, Anytown, USA",
-      instagram: "janedoe_insta",
-      facebook: "janedoe.fb",
-      is_Consignor: true,
-      is_active: true,
-      created_at: "2023-05-15",
-      bank_details: {
-        account_name: "Jane Doe",
-        account_no: "123456789",
-        bank: "First National Bank",
-      },
-    };
+const getClientData = async (id: string) => {
+  try {
+    if (!id) {
+      throw new Error("Client ID is required");
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("No auth token found. Please log in again.");
+    }
+
+    console.log("Fetching client data for ID:", id);
+    console.log("Using API URL:", `/api/clients?id=${id}`);
+    console.log("Using token:", token);
+
+    const response = await axios.get(`/api/clients?id=${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      }
+    });
+
+    console.log("API Response:", response.data);
+
+    if (response.data.status.success) {
+      return response.data.data;
   } else {
-    return {
-      id: 2,
-      external_id: "CL002",
-      first_name: "John",
-      middle_name: "",
-      last_name: "Smith",
-      suffix: "",
-      email: "john.smith@example.com",
-      contact_no: "+1 123-987-6543",
-      address: "456 Oak Lane, Somewhere, USA",
-      instagram: "johnsmith_insta",
-      facebook: "johnsmith.fb",
-      is_Consignor: false,
-      is_active: true,
-      created_at: "2023-06-20",
-      bank_details: null,
-    };
+      throw new Error(response.data.status.message);
+    }
+  } catch (error: any) {
+    console.error("Error fetching client data:", error);
+    
+    // Handle specific error cases
+    if (error.response?.status === 401) {
+      throw new Error("Authentication failed. Please log in again.");
+    }
+    
+    if (error.response?.status === 404) {
+      throw new Error("Client not found");
+    }
+    
+    throw new Error(error.response?.data?.status?.message || "Failed to fetch client data");
   }
 };
 
@@ -162,26 +165,166 @@ type Transaction = {
   status: string;
 };
 
+// Add a simple useMediaQuery hook
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) {
+      setMatches(media.matches);
+    }
+    const listener = () => setMatches(media.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [matches, query]);
+  return matches;
+}
+
 // The correct approach for React Server Components in Next.js 14+
 export default function ClientDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const [activeTab, setActiveTab] = useState("details");
+  const [clientData, setClientData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Safe approach that works in the current version while preparing for future changes
-  // The explicit type assertion ensures we maintain type safety
-  const unwrappedParams = React.use(
-    params as unknown as Promise<{ id: string }>
-  );
-  const clientId =
-    typeof unwrappedParams === "object" && unwrappedParams?.id
-      ? unwrappedParams.id
-      : params.id;
+  // Properly unwrap params using React.use()
+  const unwrappedParams = use(params);
+  const clientId = unwrappedParams.id;
 
-  // Get client data based on ID
-  const clientData = getClientData(clientId);
+  const router = useRouter();
+
+  // Only allow one delete confirmation at a time, and prevent double event firing
+  const confirmToastId = useRef<string | null>(null);
+  const deleteInProgress = useRef(false);
+  const [showDeleteBackdrop, setShowDeleteBackdrop] = useState(false);
+  const [showDeleteResult, setShowDeleteResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [showDeleteLoading, setShowDeleteLoading] = useState(false);
+
+  const isMobile = useMediaQuery("(max-width: 767px)");
+
+  useEffect(() => {
+    const fetchClientData = async () => {
+      try {
+        setIsLoading(true);
+        if (!clientId) {
+          throw new Error("Client ID is missing");
+        }
+        console.log("Fetching data for client ID:", clientId);
+        const data = await getClientData(clientId);
+        console.log("Fetched client data (raw):", data);
+        setClientData(data);
+      } catch (err: any) {
+        console.error("Error in fetchClientData:", err);
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchClientData();
+  }, [clientId]);
+
+  useEffect(() => {
+    if (showDeleteResult?.success) {
+      const timeout = setTimeout(() => {
+        setShowDeleteResult(null);
+        router.push("/clients");
+      }, 1500);
+      return () => clearTimeout(timeout);
+    }
+  }, [showDeleteResult, router]);
+
+  // Helper to get the correct client fields
+  const getField = (field: string, fallback: string = '') => {
+    if (!clientData) return fallback;
+    // Try direct field
+    if (clientData[field]) return clientData[field];
+    // Try nested under 'client'
+    if (clientData.client && clientData.client[field]) return clientData.client[field];
+    return fallback;
+  };
+
+  // Delete client handler (show modal, not toast)
+  const handleDelete = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!clientId) return;
+    setShowDeleteBackdrop(true);
+  };
+
+  const confirmDelete = async () => {
+    setShowDeleteBackdrop(false);
+    setShowDeleteLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const userExternalId = localStorage.getItem("user_external_id");
+      if (!token || !userExternalId) {
+        setShowDeleteLoading(false);
+        setShowDeleteResult({ success: false, message: "Missing authentication or user ID." });
+        return;
+      }
+      const response = await fetch(`/api/clients/${clientId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ deleted_by: userExternalId }),
+      });
+      const data = await response.json();
+      setShowDeleteLoading(false);
+      if (data.status?.success) {
+        setShowDeleteResult({ success: true, message: "Client successfully deleted!" });
+      } else {
+        setShowDeleteResult({ success: false, message: data.status?.message || "Failed to delete client" });
+      }
+    } catch (error: any) {
+      setShowDeleteLoading(false);
+      setShowDeleteResult({ success: false, message: error.message || "Failed to delete client" });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading client details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-destructive text-2xl mb-4">Error</div>
+          <p className="text-muted-foreground">{error}</p>
+          <Button variant="outline" className="mt-4" asChild>
+            <Link href="/clients">Back to Clients</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!clientData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-2xl mb-4">No Client Found</div>
+          <p className="text-muted-foreground">The requested client could not be found.</p>
+          <Button variant="outline" className="mt-4" asChild>
+            <Link href="/clients">Back to Clients</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Columns for items table
   const itemColumns: ColumnDef<Item>[] = [
@@ -249,6 +392,104 @@ export default function ClientDetailPage({
 
   return (
     <div className="container p-0 md:py-4 md:px-4 max-w-6xl mx-auto">
+      <Toaster />
+      {showDeleteBackdrop && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            onClick={() => setShowDeleteBackdrop(false)}
+          />
+          <div className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg border border-gray-200 p-6 w-[90vw] max-w-sm flex flex-col items-center">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-3">
+              <svg
+                className="w-6 h-6 text-red-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+            </div>
+            <h4 className="text-center font-medium text-lg text-gray-900 mb-1">
+              Confirm Delete
+            </h4>
+            <p className="text-center text-gray-600 mb-4">
+              Are you sure you want to delete this client? This action cannot be undone.
+            </p>
+            <div className="flex w-full gap-3">
+              <button
+                onClick={() => setShowDeleteBackdrop(false)}
+                className="flex-1 py-2 border border-gray-300 text-gray-500 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+      {showDeleteResult && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            onClick={() => !showDeleteResult.success && setShowDeleteResult(null)}
+          />
+          <div className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg border border-gray-200 p-6 w-[90vw] max-w-sm flex flex-col items-center">
+            <div className={`w-12 h-12 ${showDeleteResult.success ? 'bg-green-100' : 'bg-red-100'} rounded-full flex items-center justify-center mb-3`}>
+              <svg
+                className={`w-6 h-6 ${showDeleteResult.success ? 'text-green-500' : 'text-red-500'}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                {showDeleteResult.success ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                )}
+              </svg>
+            </div>
+            <h4 className="text-center font-medium text-lg text-gray-900 mb-1">
+              {showDeleteResult.success ? 'Deleted' : 'Error'}
+            </h4>
+            <p className="text-center text-gray-600 mb-4">
+              {showDeleteResult.message}
+            </p>
+            {!showDeleteResult.success && (
+              <div className="flex w-full gap-3">
+                <button
+                  onClick={() => setShowDeleteResult(null)}
+                  className="flex-1 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+      {showDeleteLoading && (
+        <>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="flex flex-col items-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary mb-4"></div>
+              <p className="text-lg text-white font-semibold">Deleting client...</p>
+            </div>
+          </div>
+        </>
+      )}
       {/* Header Card */}
       <Card className="mb-6 border-0 md:border md:shadow-sm">
         <CardHeader className="pb-2 md:pb-4">
@@ -278,48 +519,51 @@ export default function ClientDetailPage({
               <div className="flex flex-col items-center md:items-start">
                 <div className="flex flex-col md:flex-row md:items-center md:gap-2">
                   <h1 className="text-2xl font-bold text-center md:text-left">
-                    {clientData.first_name} {clientData.last_name}
+                    {getField('first_name', 'No First Name')} {getField('last_name', 'No Last Name')}
                   </h1>
                   <div className="flex justify-center gap-2 mt-2 mb-1 md:mt-0 md:mb-0">
-                    {clientData.is_active && <Badge>Active</Badge>}
-                    {clientData.is_Consignor && (
+                    {getField('is_active') && <Badge>Active</Badge>}
+                    {getField('is_consignor') && (
                       <Badge variant="secondary">Consignor</Badge>
                     )}
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground text-center md:text-left">
-                  Client ID: {clientData.external_id}
+                  Client ID: {getField('external_id', 'No ID')}
                 </p>
               </div>
             </div>
-            <div className="hidden md:flex md:gap-2">
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/clients/${clientId}/edit`}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </Link>
-              </Button>
-              <Button variant="destructive" size="sm">
-                <Trash className="mr-2 h-4 w-4" />
-                Delete
-              </Button>
-            </div>
+            {/* Only render one set of action buttons in the DOM at a time */}
+            {isMobile && (
+              <CardFooter className="px-4 py-3 flex justify-center w-full">
+                <Button variant="outline" size="sm" asChild className="flex-1">
+                  <Link href={`/clients/${clientId}/edit`}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </Link>
+                </Button>
+                <Button variant="destructive" size="sm" className="flex-1" onClick={handleDelete}>
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              </CardFooter>
+            )}
+            {!isMobile && (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/clients/${clientId}/edit`}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </Link>
+                </Button>
+                <Button variant="destructive" size="sm" onClick={handleDelete}>
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              </div>
+            )}
           </div>
         </CardHeader>
-        <CardFooter className="px-4 py-3 flex justify-center md:hidden">
-          <div className="flex gap-2 w-full">
-            <Button variant="outline" size="sm" asChild className="flex-1">
-              <Link href={`/clients/${clientId}/edit`}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </Link>
-            </Button>
-            <Button variant="destructive" size="sm" className="flex-1">
-              <Trash className="mr-2 h-4 w-4" />
-              Delete
-            </Button>
-          </div>
-        </CardFooter>
       </Card>
 
       {/* Tabs */}
@@ -327,7 +571,7 @@ export default function ClientDetailPage({
         <div className="mb-6">
           <TabsList className="w-full grid grid-cols-3 md:w-auto md:mx-auto">
             <TabsTrigger value="details">Details</TabsTrigger>
-            {clientData.is_Consignor && (
+            {getField('is_consignor') && (
               <TabsTrigger value="items">Items</TabsTrigger>
             )}
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
@@ -350,28 +594,28 @@ export default function ClientDetailPage({
                   <h3 className="text-sm font-medium text-muted-foreground">
                     First Name
                   </h3>
-                  <p className="font-medium">{clientData.first_name}</p>
+                  <p className="font-medium">{getField('first_name', 'No First Name')}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground">
                     Last Name
                   </h3>
-                  <p className="font-medium">{clientData.last_name}</p>
+                  <p className="font-medium">{getField('last_name', 'No Last Name')}</p>
                 </div>
-                {clientData.middle_name && (
+                {getField('middle_name') && (
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground">
                       Middle Name
                     </h3>
-                    <p className="font-medium">{clientData.middle_name}</p>
+                    <p className="font-medium">{getField('middle_name')}</p>
                   </div>
                 )}
-                {clientData.suffix && (
+                {getField('suffix') && (
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground">
                       Suffix
                     </h3>
-                    <p className="font-medium">{clientData.suffix}</p>
+                    <p className="font-medium">{getField('suffix')}</p>
                   </div>
                 )}
               </div>
@@ -379,48 +623,51 @@ export default function ClientDetailPage({
               <div className="space-y-3 pt-2">
                 <div className="flex items-center p-2 rounded hover:bg-muted transition-colors">
                   <Mail className="h-5 w-5 mr-3 text-primary" />
-                  <a
-                    href={`mailto:${clientData.email}`}
-                    className="text-primary"
-                  >
-                    {clientData.email}
-                  </a>
+                  {getField('email') ? (
+                    <a href={`mailto:${getField('email')}`} className="text-primary">
+                      {getField('email')}
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground">No email provided</span>
+                  )}
                 </div>
 
                 <div className="flex items-center p-2 rounded hover:bg-muted transition-colors">
                   <Phone className="h-5 w-5 mr-3 text-primary" />
-                  <a href={`tel:${clientData.contact_no}`}>
-                    {clientData.contact_no}
-                  </a>
+                  {getField('contact_no') ? (
+                    <a href={`tel:${getField('contact_no')}`}>{getField('contact_no')}</a>
+                  ) : (
+                    <span className="text-muted-foreground">No contact number provided</span>
+                  )}
                 </div>
 
                 <div className="flex items-start p-2 rounded hover:bg-muted transition-colors">
                   <Home className="h-5 w-5 mr-3 mt-0.5 text-primary" />
-                  <span>{clientData.address}</span>
+                  <span>{getField('address', 'No address provided')}</span>
                 </div>
 
-                {clientData.instagram && (
+                {getField('instagram') && (
                   <div className="flex items-center p-2 rounded hover:bg-muted transition-colors">
                     <Instagram className="h-5 w-5 mr-3 text-primary" />
                     <a
-                      href={`https://instagram.com/${clientData.instagram}`}
+                      href={`https://instagram.com/${getField('instagram')}`}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      @{clientData.instagram}
+                      @{getField('instagram')}
                     </a>
                   </div>
                 )}
 
-                {clientData.facebook && (
+                {getField('facebook') && (
                   <div className="flex items-center p-2 rounded hover:bg-muted transition-colors">
                     <Facebook className="h-5 w-5 mr-3 text-primary" />
                     <a
-                      href={`https://facebook.com/${clientData.facebook}`}
+                      href={`https://facebook.com/${getField('facebook')}`}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      {clientData.facebook}
+                      {getField('facebook')}
                     </a>
                   </div>
                 )}
@@ -429,7 +676,7 @@ export default function ClientDetailPage({
           </Card>
 
           {/* Bank Details Card if Consignor */}
-          {clientData.is_Consignor && clientData.bank_details && (
+          {getField('is_consignor') && getField('bank') && (
             <Card className="shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center">
@@ -445,14 +692,14 @@ export default function ClientDetailPage({
                   <h3 className="text-sm font-medium text-muted-foreground">
                     Bank
                   </h3>
-                  <p className="font-medium">{clientData.bank_details.bank}</p>
+                  <p className="font-medium">{getField('bank').bank || 'No bank specified'}</p>
                 </div>
                 <div className="p-3 rounded bg-muted/50">
                   <h3 className="text-sm font-medium text-muted-foreground">
                     Account Name
                   </h3>
                   <p className="font-medium">
-                    {clientData.bank_details.account_name}
+                    {getField('bank').account_name || 'No account name specified'}
                   </p>
                 </div>
                 <div className="p-3 rounded bg-muted/50">
@@ -460,7 +707,7 @@ export default function ClientDetailPage({
                     Account Number
                   </h3>
                   <p className="font-medium">
-                    {clientData.bank_details.account_no}
+                    {getField('bank').account_no || 'No account number specified'}
                   </p>
                 </div>
               </CardContent>
@@ -482,14 +729,14 @@ export default function ClientDetailPage({
                   <h3 className="text-sm font-medium text-muted-foreground">
                     Created At
                   </h3>
-                  <p className="font-medium">{clientData.created_at}</p>
+                  <p className="font-medium">{getField('created_at', 'No creation date')}</p>
                 </div>
                 <div className="p-3 rounded bg-muted/50">
                   <h3 className="text-sm font-medium text-muted-foreground">
                     Client Status
                   </h3>
                   <p className="font-medium">
-                    {clientData.is_active ? "Active" : "Inactive"}
+                    {getField('is_active') ? "Active" : "Inactive"}
                   </p>
                 </div>
                 <div className="p-3 rounded bg-muted/50">
@@ -497,7 +744,7 @@ export default function ClientDetailPage({
                     Consignor Status
                   </h3>
                   <p className="font-medium">
-                    {clientData.is_Consignor ? "Yes" : "No"}
+                    {getField('is_consignor') ? "Yes" : "No"}
                   </p>
                 </div>
               </div>
@@ -506,7 +753,7 @@ export default function ClientDetailPage({
         </TabsContent>
 
         {/* Items Tab (only for Consignors) */}
-        {clientData.is_Consignor && (
+        {getField('is_consignor') && (
           <TabsContent value="items" className="mt-0">
             <Card className="shadow-sm">
               <CardHeader className="pb-3">
@@ -682,7 +929,7 @@ export default function ClientDetailPage({
                           <td className="py-4 px-4 text-center">
                             <Badge
                               variant="outline"
-                              className={`${
+                              className={`$${
                                 transaction.status === "Completed"
                                   ? "bg-black text-white hover:bg-black"
                                   : ""

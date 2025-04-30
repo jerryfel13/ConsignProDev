@@ -183,6 +183,20 @@ export function SiteHeader() {
                       <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
+                  {user.role === 'admin' && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild className="dropdown-menu-item">
+                        <Link
+                          href="/users/create"
+                          className="flex items-center text-black w-full"
+                        >
+                          <Users className="mr-2 h-4 w-4 text-gray-700" />
+                          <span>Create User</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleLogout}

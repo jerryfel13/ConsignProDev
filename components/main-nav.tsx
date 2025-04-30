@@ -78,7 +78,7 @@ export function MainNav() {
             </SheetContent>
           </Sheet>
         </div>
-        <Link href="/" className="flex items-center space-x-2 text-white ml-6">
+        <Link href="/dashboard" className="flex items-center space-x-2 text-white ml-6">
           <Package className="h-6 w-6" />
           <span className="inline-block font-bold">LWPH-SIMS</span>
         </Link>

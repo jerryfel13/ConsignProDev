@@ -15,6 +15,7 @@ interface UserData {
   is_active: boolean;
   created_at: string;
   last_login: string;
+  role: 'admin' | 'user';
 }
 
 const mockUser: UserData = {
@@ -24,7 +25,8 @@ const mockUser: UserData = {
   email: "john@example.com",
   is_active: true,
   created_at: new Date().toISOString(),
-  last_login: new Date().toISOString()
+  last_login: new Date().toISOString(),
+  role: 'admin'
 };
 
 /**
@@ -57,36 +59,29 @@ export function useAuth() {
   }, [router]);
 
   const logout = async () => {
-    // Remove confirmation dialog, just perform logout
     try {
       const token = localStorage.getItem("token");
       if (!token) {
         throw new Error("No token found");
       }
-
       // Call the logout API
       await axios.post('/api/auth/logout', {}, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
-
-      // Clear local storage
-      localStorage.removeItem("token");
-      localStorage.removeItem("userData");
-      localStorage.removeItem("userEmail");
-
-      // Show success message
-      toast.success("Logged out successfully");
-
-      // Redirect to login page
-      router.push("/auth/login");
     } catch (error: any) {
-      console.error("Logout error:", error);
-      const errorMessage = error.response?.data?.message || "Failed to logout";
-      toast.error(errorMessage);
-      
-      // Even if the API call fails, we should still clear local storage and redirect
+      // If 401, ignore and proceed to clear session
+      if (error.response && error.response.status === 401) {
+        console.warn('Session already expired or unauthorized.');
+      } else {
+        console.error("Logout error:", error);
+        // Optionally show a toast for other errors
+        // const errorMessage = error.response?.data?.message || "Failed to logout";
+        // toast.error(errorMessage);
+      }
+    } finally {
+      // Always clear local storage and redirect
       localStorage.removeItem("token");
       localStorage.removeItem("userData");
       localStorage.removeItem("userEmail");
@@ -129,7 +124,8 @@ export function useAuth() {
             email: email || localStorage.getItem("userEmail") || "user@example.com",
             is_active: true,
             created_at: new Date().toISOString(),
-            last_login: new Date().toISOString()
+            last_login: new Date().toISOString(),
+            role: 'admin'
           });
           
           resolve();
@@ -155,7 +151,8 @@ export function useAuth() {
             email: credentials.email,
             is_active: true,
             created_at: new Date().toISOString(),
-            last_login: new Date().toISOString()
+            last_login: new Date().toISOString(),
+            role: 'admin'
           });
           setIsLoading(false);
           resolve();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -31,6 +31,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { BankDetailsModal } from "@/components/bank-details-modal"; // Assuming this is correctly located
 import { clientApi } from "@/lib/api";
+
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+}
 
 // Define the form schema (updated)
 const formSchema = z.object({
@@ -73,7 +80,7 @@ type FormValues = z.infer<typeof formSchema>;
 interface AddClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onClientAdded?: () => void; // Optional callback after successful addition
+  onClientAdded: (newClient: Client) => void;
 }
 
 export function AddClientModal({
@@ -89,6 +96,9 @@ export function AddClientModal({
     account_no: string;
     bank: string;
   } | null>(null);
+  const [showSuccessPrompt, setShowSuccessPrompt] = useState(false);
+  const successTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [pendingSuccessPrompt, setPendingSuccessPrompt] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema) as any,
@@ -183,11 +193,21 @@ export function AddClientModal({
       // Reset form, close modal, and trigger callback
       form.reset();
       setBankDetails(null);
+      // Map API response to table's expected client shape
+      const apiClient = response.data.data;
+      const mappedClient = {
+        id: apiClient.external_id,
+        name: `${apiClient.first_name} ${apiClient.last_name}`.trim(),
+        email: apiClient.email,
+        phone: apiClient.contact_no,
+        status: apiClient.status || (apiClient.is_active ? "Active" : "Inactive"),
+        isConsignor: apiClient.is_consignor,
+        consignments: apiClient.consignments_count || 0,
+      };
+      onClientAdded(mappedClient);
+      setPendingSuccessPrompt(true);
       onClose();
-      onClientAdded?.();
-
       console.log("Client added successfully:", response);
-      toast.success("Client added successfully!");
     } catch (error: any) {
       console.error("Failed to submit client:", error);
       if (error.response && error.response.data) {
@@ -236,6 +256,18 @@ export function AddClientModal({
       setBankDetails(null);
     }
   }, [isOpen, form, setBankDetails]);
+
+  // Show the success prompt after the modal is closed
+  useEffect(() => {
+    if (!isOpen && pendingSuccessPrompt) {
+      setShowSuccessPrompt(true);
+      setPendingSuccessPrompt(false);
+      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+      successTimeoutRef.current = setTimeout(() => {
+        setShowSuccessPrompt(false);
+      }, 1500);
+    }
+  }, [isOpen, pendingSuccessPrompt]);
 
   return (
     <>
@@ -498,6 +530,31 @@ export function AddClientModal({
           // It might be better to collect bank details without depending on external_id yet.
           clientExtId={""}
         />
+      )}
+
+      {/* Success Prompt Modal */}
+      {showSuccessPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 w-[90vw] max-w-sm flex flex-col items-center">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
+              <svg
+                className="w-6 h-6 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h4 className="text-center font-medium text-lg text-gray-900 mb-1">
+              Client Added
+            </h4>
+            <p className="text-center text-gray-600 mb-2">
+              The client was added successfully!
+            </p>
+          </div>
+        </div>
       )}
     </>
   );
