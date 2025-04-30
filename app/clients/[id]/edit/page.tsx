@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,8 @@ export default function EditClientPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showResultPrompt, setShowResultPrompt] = useState<{ success: boolean; message: string } | null>(null);
+  const resultTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const fetchClientData = async () => {
@@ -81,24 +83,24 @@ export default function EditClientPage() {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
-        toast.error("No authentication token found.");
+        setShowResultPrompt({ success: false, message: "No authentication token found." });
         setSaving(false);
         return;
       }
       const userExternalId = localStorage.getItem("user_external_id");
       if (!userExternalId) {
-        toast.error("No user external_id found. Please log in again.");
+        setShowResultPrompt({ success: false, message: "No user external_id found. Please log in again." });
         setSaving(false);
         return;
       }
       const id = params?.id as string;
       if (!id) {
-        toast.error("No client id found in URL.");
+        setShowResultPrompt({ success: false, message: "No client id found in URL." });
         setSaving(false);
         return;
       }
       if (client?.is_consignor && !client.bank) {
-        toast.error("Bank information is required for consignors.");
+        setShowResultPrompt({ success: false, message: "Bank information is required for consignors." });
         setSaving(false);
         return;
       }
@@ -127,15 +129,17 @@ export default function EditClientPage() {
       });
       const data = await response.json();
       if (data.status?.success) {
-        toast.success("Client successfully updated!");
-        setTimeout(() => {
+        setShowResultPrompt({ success: true, message: "Client successfully updated!" });
+        if (resultTimeoutRef.current) clearTimeout(resultTimeoutRef.current);
+        resultTimeoutRef.current = setTimeout(() => {
+          setShowResultPrompt(null);
           router.push(`/clients/${id}`);
-        }, 1200);
+        }, 1500);
       } else {
-        toast.error(data.status?.message || "Failed to update client");
+        setShowResultPrompt({ success: false, message: data.status?.message || "Failed to update client" });
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to update client");
+      setShowResultPrompt({ success: false, message: error.message || "Failed to update client" });
       console.error("Error saving client data:", error);
     } finally {
       setSaving(false);
@@ -355,6 +359,45 @@ export default function EditClientPage() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Result Prompt Modal */}
+      {showResultPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 w-[90vw] max-w-sm flex flex-col items-center">
+            <div className={`w-12 h-12 ${showResultPrompt.success ? 'bg-green-100' : 'bg-red-100'} rounded-full flex items-center justify-center mb-3`}>
+              <svg
+                className={`w-6 h-6 ${showResultPrompt.success ? 'text-green-500' : 'text-red-500'}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                {showResultPrompt.success ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                )}
+              </svg>
+            </div>
+            <h4 className="text-center font-medium text-lg text-gray-900 mb-1">
+              {showResultPrompt.success ? 'Updated' : 'Error'}
+            </h4>
+            <p className="text-center text-gray-600 mb-4">
+              {showResultPrompt.message}
+            </p>
+            {!showResultPrompt.success && (
+              <div className="flex w-full gap-3">
+                <button
+                  onClick={() => setShowResultPrompt(null)}
+                  className="flex-1 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

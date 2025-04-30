@@ -49,7 +49,12 @@ export function useAuth() {
     }
 
     try {
-      setUser(JSON.parse(userData));
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      // Always set user_external_id on page load if available
+      if (parsedUser.external_id) {
+        localStorage.setItem("user_external_id", parsedUser.external_id);
+      }
     } catch (error) {
       console.error("Error parsing user data:", error);
       router.push("/auth/login");
@@ -137,30 +142,34 @@ export function useAuth() {
   };
 
   // Function for demonstration login
-  const login = (credentials: { email: string; password: string }) => {
-    // Mock login - replace with actual API call
+  const login = async (credentials: { email: string; password: string }) => {
     setIsLoading(true);
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        if (credentials.email && credentials.password) {
-          localStorage.setItem("isAuthenticated", "true");
-          setUser({
-            external_id: "123",
-            first_name: "Admin",
-            last_name: "User",
-            email: credentials.email,
-            is_active: true,
-            created_at: new Date().toISOString(),
-            last_login: new Date().toISOString(),
-            role: 'admin'
-          });
-          setIsLoading(false);
-          resolve();
-        } else {
-          setIsLoading(false);
-          reject(new Error("Invalid credentials"));
-        }
-      }, 1000);
+    return new Promise<void>(async (resolve, reject) => {
+      try {
+        // Replace this with your real API call
+        const response = await axios.post('/api/auth/login', credentials);
+        const apiUser = response.data.data;
+        // Save user info to localStorage
+        localStorage.setItem("user_external_id", apiUser.external_id);
+        localStorage.setItem("userData", JSON.stringify(apiUser));
+        localStorage.setItem("userEmail", apiUser.email);
+        // Set user state (flatten role to string)
+        setUser({
+          external_id: apiUser.external_id,
+          first_name: apiUser.first_name,
+          last_name: apiUser.last_name,
+          email: apiUser.email,
+          is_active: apiUser.is_active,
+          created_at: apiUser.created_at,
+          last_login: apiUser.last_login,
+          role: apiUser.role?.name === 'Admin' ? 'admin' : 'user',
+        });
+        setIsLoading(false);
+        resolve();
+      } catch (error) {
+        setIsLoading(false);
+        reject(new Error("Invalid credentials"));
+      }
     });
   };
 
