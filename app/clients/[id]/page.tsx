@@ -258,33 +258,33 @@ export default function ClientDetailPage({
   const confirmDelete = async () => {
     setShowDeleteBackdrop(false);
     setShowDeleteLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      const userExternalId = localStorage.getItem("user_external_id");
-      if (!token || !userExternalId) {
+              try {
+                const token = localStorage.getItem("token");
+                const userExternalId = localStorage.getItem("user_external_id");
+                if (!token || !userExternalId) {
         setShowDeleteLoading(false);
         setShowDeleteResult({ success: false, message: "Missing authentication or user ID." });
-        return;
-      }
-      const response = await fetch(`/api/clients/${clientId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ deleted_by: userExternalId }),
-      });
-      const data = await response.json();
+                  return;
+                }
+                const response = await fetch(`/api/clients/${clientId}`, {
+                  method: "DELETE",
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ deleted_by: userExternalId }),
+                });
+                const data = await response.json();
       setShowDeleteLoading(false);
-      if (data.status?.success) {
+                if (data.status?.success) {
         setShowDeleteResult({ success: true, message: "Client successfully deleted!" });
-      } else {
+                } else {
         setShowDeleteResult({ success: false, message: data.status?.message || "Failed to delete client" });
-      }
-    } catch (error: any) {
+                }
+              } catch (error: any) {
       setShowDeleteLoading(false);
       setShowDeleteResult({ success: false, message: error.message || "Failed to delete client" });
-    }
+              }
   };
 
   if (isLoading) {

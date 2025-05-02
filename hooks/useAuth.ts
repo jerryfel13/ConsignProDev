@@ -80,7 +80,7 @@ export function useAuth() {
       if (error.response && error.response.status === 401) {
         console.warn('Session already expired or unauthorized.');
       } else {
-        console.error("Logout error:", error);
+      console.error("Logout error:", error);
         // Optionally show a toast for other errors
         // const errorMessage = error.response?.data?.message || "Failed to logout";
         // toast.error(errorMessage);
@@ -154,7 +154,7 @@ export function useAuth() {
         localStorage.setItem("userData", JSON.stringify(apiUser));
         localStorage.setItem("userEmail", apiUser.email);
         // Set user state (flatten role to string)
-        setUser({
+          setUser({
           external_id: apiUser.external_id,
           first_name: apiUser.first_name,
           last_name: apiUser.last_name,
@@ -163,13 +163,13 @@ export function useAuth() {
           created_at: apiUser.created_at,
           last_login: apiUser.last_login,
           role: apiUser.role?.name === 'Admin' ? 'admin' : 'user',
-        });
-        setIsLoading(false);
-        resolve();
+          });
+          setIsLoading(false);
+          resolve();
       } catch (error) {
-        setIsLoading(false);
-        reject(new Error("Invalid credentials"));
-      }
+          setIsLoading(false);
+          reject(new Error("Invalid credentials"));
+        }
     });
   };
 

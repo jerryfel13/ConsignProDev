@@ -42,7 +42,7 @@ export function SiteHeader() {
   const router = useRouter();
   const { user, isLoading, logout } = useAuth();
   const [showBackdrop, setShowBackdrop] = useState(false);
-
+  console.log("name",user?.role?.name);
   const handleLogout = () => {
     setShowBackdrop(true);
     const toastId = toast(
@@ -183,16 +183,16 @@ export function SiteHeader() {
                       <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
-                  {user.role === 'admin' && (
+                  {user?.role?.name === 'Admin' && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild className="dropdown-menu-item">
                         <Link
-                          href="/users/create"
+                          href="/users/manage-users"
                           className="flex items-center text-black w-full"
                         >
                           <Users className="mr-2 h-4 w-4 text-gray-700" />
-                          <span>Create User</span>
+                          <span>Manage Users</span>
                         </Link>
                       </DropdownMenuItem>
                     </>
