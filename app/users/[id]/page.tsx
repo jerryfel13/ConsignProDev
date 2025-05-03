@@ -17,6 +17,10 @@ export default function UserDetailsPage() {
   const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState<any>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [role, setRole] = useState<string>("");
+  const [roleUpdating, setRoleUpdating] = useState(false);
+  const [roleChanged, setRoleChanged] = useState(false);
+  const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
   const router = useRouter();
   const params = useParams();
   const userId = params?.id as string;
@@ -35,6 +39,7 @@ export default function UserDetailsPage() {
             last_name: response.data.data.last_name || "",
             email: response.data.data.email || ""
           });
+          setRole(response.data.data.role?.name || "Staff");
         } else {
           setError(response.data.status?.message || "User not found");
         }
@@ -65,17 +70,14 @@ export default function UserDetailsPage() {
       const token = localStorage.getItem("token");
       const updatedBy = loggedInExternalId;
       if (!token || !updatedBy) throw new Error("Missing authentication or user ID.");
-      
+      // Update user details
       const payload = {
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
         updated_by: updatedBy
       };
-      
-      console.log('Update Payload:', payload);
-      
-      const response = await axios.put(
+      const userRes = await axios.put(
         `https://lwphsims-uat.up.railway.app/users/${userId}`,
         payload,
         {
@@ -85,18 +87,36 @@ export default function UserDetailsPage() {
           },
         }
       );
-      const data = response.data;
-      if (data.status?.success) {
-        setShowResultPrompt({ success: true, message: "User successfully updated!" });
-        setUser((prev: any) => ({ ...prev, ...form }));
+      let roleRes = { data: { status: { success: true } } };
+      if (role !== (user?.role?.name || "Staff")) {
+        // Update role if changed
+        const rolePayload = {
+          roleName: role,
+          updated_by: updatedBy
+        };
+        roleRes = await axios.put(
+          `https://lwphsims-uat.up.railway.app/users/update-role/${userId}`,
+          rolePayload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+      if (userRes.data.status?.success && roleRes.data.status?.success) {
+        setShowResultPrompt({ success: true, message: "User details and role successfully updated!" });
+        setUser((prev: any) => ({ ...prev, ...form, role: { ...prev.role, name: role } }));
+        setHasChanges(false);
         setTimeout(() => {
           setShowResultPrompt(null);
         }, 1500);
       } else {
-        setShowResultPrompt({ success: false, message: data.status?.message || "Failed to update user" });
+        setShowResultPrompt({ success: false, message: userRes.data.status?.message || roleRes.data.status?.message || "Failed to update user or role" });
       }
     } catch (error: any) {
-      setShowResultPrompt({ success: false, message: error.response?.data?.status?.message || error.message || "Failed to update user" });
+      setShowResultPrompt({ success: false, message: error.response?.data?.status?.message || error.message || "Failed to update user or role" });
     } finally {
       setUpdating(false);
     }
@@ -157,7 +177,7 @@ export default function UserDetailsPage() {
           <CardTitle>User Details</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="space-y-6" onSubmit={!isSelf ? handleUpdate : undefined}>
+          <form className="space-y-6" onSubmit={e => { if (!isSelf) { e.preventDefault(); setShowUpdateConfirm(true); } else { e.preventDefault(); } }}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block font-semibold mb-1">First Name</label>
@@ -171,6 +191,28 @@ export default function UserDetailsPage() {
                 <label className="block font-semibold mb-1">Email</label>
                 <Input name="email" type="email" value={form?.email ?? user.email} readOnly />
               </div>
+              {!isSelf && (
+                <div className="md:col-span-2">
+                  <label className="block font-semibold mb-1">Role</label>
+                  <select
+                    className="border rounded px-2 py-1 text-sm max-w-xs"
+                    value={role}
+                    onChange={e => {
+                      setRole(e.target.value);
+                      setHasChanges(
+                        form.first_name !== user?.first_name ||
+                        form.last_name !== user?.last_name ||
+                        form.email !== user?.email ||
+                        e.target.value !== (user?.role?.name || "Staff")
+                      );
+                    }}
+                    disabled={updating}
+                  >
+                    <option value="Admin">Admin</option>
+                    <option value="Staff">Staff</option>
+                  </select>
+                </div>
+              )}
             </div>
             <div className="mt-8 space-y-2 text-sm text-muted-foreground">
               <div><span className="font-semibold">External ID:</span> {user.external_id}</div>
@@ -256,6 +298,28 @@ export default function UserDetailsPage() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* Update Confirmation Modal */}
+      {showUpdateConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 w-[90vw] max-w-sm flex flex-col items-center">
+            <h4 className="text-center font-medium text-lg text-gray-900 mb-3">Are you sure you want to update this user's details and role?</h4>
+            <div className="flex w-full gap-3 mt-2">
+              <button
+                onClick={() => setShowUpdateConfirm(false)}
+                className="flex-1 py-2 border border-gray-300 text-gray-500 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowUpdateConfirm(false); handleUpdate(new Event('submit') as any); }}
+                className="flex-1 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Yes, Update
+              </button>
+            </div>
           </div>
         </div>
       )}
