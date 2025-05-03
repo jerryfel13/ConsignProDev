@@ -116,7 +116,11 @@ export default function EditClientPage() {
         instagram: client?.instagram || null,
         facebook: client?.facebook || null,
         is_consignor: client?.is_consignor,
-        bank: client?.is_consignor ? client?.bank : null,
+        bank: client?.is_consignor ? {
+          account_name: client.bank?.account_name,
+          account_no: client.bank?.account_no,
+          bank: client.bank?.bank
+        } : null,
         updated_by: userExternalId,
       };
       const response = await fetch(`/api/clients/${id}`, {
