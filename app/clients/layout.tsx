@@ -9,7 +9,7 @@ import { SiteHeader } from "@/components/site-header";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Client & Consignment Management System",
+  title: "LWPH-SIMS",
   description: "Manage clients and consignments efficiently",
   generator: "v0.dev",
 };
