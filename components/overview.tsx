@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { Area, AreaChart, CartesianGrid, Legend, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 
 import {
   ChartContainer,
@@ -47,6 +47,12 @@ const data = [
   },
 ];
 
+const COLORS = {
+  clients: "#FF6B6B",
+  consignments: "#4ECDC4",
+  purchasedItems: "#45B7D1",
+};
+
 export function Overview() {
   return (
     <ChartContainer
@@ -66,62 +72,101 @@ export function Overview() {
       }}
       className="h-[300px] w-full"
     >
-      <BarChart
-        data={data}
-        margin={{
-          top: 16,
-          right: 24,
-          bottom: 16,
-          left: 24,
-        }}
-      >
-        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-        <XAxis 
-          dataKey="name" 
-          tickLine={false} 
-          axisLine={false}
-          fontSize={11}
-          tickMargin={8}
-        />
-        <YAxis 
-          tickLine={false} 
-          axisLine={false}
-          fontSize={11}
-          width={35}
-          tickMargin={8}
-        />
-        <ChartTooltip content={<ChartTooltipContent />} />
-        <Legend 
-          verticalAlign="top" 
-          height={36}
-          wrapperStyle={{
-            fontSize: '11px',
-            paddingBottom: '8px',
-            paddingTop: '4px'
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart
+          data={data}
+          margin={{
+            top: 16,
+            right: 24,
+            bottom: 16,
+            left: 24,
           }}
-        />
-        <Bar
-          dataKey="clients"
-          name="Clients"
-          fill="var(--color-clients)"
-          radius={[4, 4, 0, 0]}
-          maxBarSize={40}
-        />
-        <Bar
-          dataKey="consignments"
-          name="Consignments"
-          fill="var(--color-consignments)"
-          radius={[4, 4, 0, 0]}
-          maxBarSize={40}
-        />
-        <Bar
-          dataKey="purchasedItems"
-          name="Purchased Items"
-          fill="var(--color-purchasedItems)"
-          radius={[4, 4, 0, 0]}
-          maxBarSize={40}
-        />
-      </BarChart>
+        >
+          <defs>
+            <linearGradient id="colorClients" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={COLORS.clients} stopOpacity={0.8}/>
+              <stop offset="95%" stopColor={COLORS.clients} stopOpacity={0}/>
+            </linearGradient>
+            <linearGradient id="colorConsignments" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={COLORS.consignments} stopOpacity={0.8}/>
+              <stop offset="95%" stopColor={COLORS.consignments} stopOpacity={0}/>
+            </linearGradient>
+            <linearGradient id="colorPurchasedItems" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={COLORS.purchasedItems} stopOpacity={0.8}/>
+              <stop offset="95%" stopColor={COLORS.purchasedItems} stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+          <CartesianGrid 
+            strokeDasharray="3 3" 
+            vertical={false}
+            stroke="hsl(var(--border))"
+            opacity={0.2}
+          />
+          <XAxis 
+            dataKey="name" 
+            tickLine={false} 
+            axisLine={false}
+            fontSize={11}
+            tickMargin={8}
+            tick={{ fill: "hsl(var(--muted-foreground))" }}
+          />
+          <YAxis 
+            tickLine={false} 
+            axisLine={false}
+            fontSize={11}
+            width={35}
+            tickMargin={8}
+            tick={{ fill: "hsl(var(--muted-foreground))" }}
+          />
+          <ChartTooltip 
+            content={<ChartTooltipContent />}
+            cursor={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }}
+          />
+          <Legend 
+            verticalAlign="top" 
+            height={36}
+            wrapperStyle={{
+              fontSize: '11px',
+              paddingBottom: '8px',
+              paddingTop: '4px',
+              color: 'hsl(var(--muted-foreground))'
+            }}
+          />
+          <Area
+            type="monotone"
+            dataKey="clients"
+            name="Clients"
+            stroke={COLORS.clients}
+            fillOpacity={1}
+            fill="url(#colorClients)"
+            strokeWidth={2}
+            animationDuration={1500}
+            animationBegin={0}
+          />
+          <Area
+            type="monotone"
+            dataKey="consignments"
+            name="Consignments"
+            stroke={COLORS.consignments}
+            fillOpacity={1}
+            fill="url(#colorConsignments)"
+            strokeWidth={2}
+            animationDuration={1500}
+            animationBegin={0}
+          />
+          <Area
+            type="monotone"
+            dataKey="purchasedItems"
+            name="Purchased Items"
+            stroke={COLORS.purchasedItems}
+            fillOpacity={1}
+            fill="url(#colorPurchasedItems)"
+            strokeWidth={2}
+            animationDuration={1500}
+            animationBegin={0}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
     </ChartContainer>
   );
 }
