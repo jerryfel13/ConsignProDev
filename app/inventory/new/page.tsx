@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { useForm, type SubmitHandler, type FieldValues } from "react-hook-form";
+import * as z from "zod";
+import axios from "axios";
 import {
   ArrowLeft,
   Box,
@@ -57,6 +58,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { ProductCategoryModal } from "@/components/product-category-modal";
+import { ProductBrandModal } from "@/components/product-brand-modal";
+import { ProductAuthenticatorModal } from "@/components/product-authenticator-modal";
 
 const formSchema = z.object({
   category_ext_id: z.string().min(1, "Category is required"),
@@ -70,12 +73,29 @@ const formSchema = z.object({
   auth_ext_id: z.string().min(1, "Authenticator is required"),
   inclusion: z.array(z.string()),
   images: z.array(z.string()),
-  condition_ext_id: z.string().min(1, "Condition is required"),
+  condition: z.object({
+    interior: z.enum(["Good", "Good as new", "New", "Old"], {
+      required_error: "Please select interior condition",
+    }),
+    exterior: z.enum(["Good", "Good as new", "New", "Old"], {
+      required_error: "Please select exterior condition",
+    }),
+    overall: z.enum(["Good", "Good as new", "New", "Old"], {
+      required_error: "Please select overall condition",
+    }),
+    description: z.string().optional(),
+  }),
+  stock: z.object({
+    min_qty: z.coerce.number().min(0, "Minimum quantity must be a positive number"),
+    qty_in_stock: z.coerce.number().min(0, "Quantity in stock must be a positive number"),
+  }),
   cost: z.number().min(0, "Cost must be a positive number"),
   price: z.number().min(0, "Price must be a positive number"),
   is_consigned: z.boolean(),
   consignor_ext_id: z.string().optional(),
   consignor_selling_price: z.number().optional(),
+  consigned_date: z.string().optional(),
+  created_by: z.string().min(1, "Created by is required"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -112,11 +132,66 @@ const parseCurrencyInput = (value: string) => {
 export default function AddNewItemPage() {
   const [itemType, setItemType] = useState("product");
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
+  const [isAuthenticatorModalOpen, setIsAuthenticatorModalOpen] = useState(false);
   const [newInclusion, setNewInclusion] = useState("");
   const [inclusions, setInclusions] = useState<string[]>([]);
-  // Add display state for cost and price
   const [costDisplay, setCostDisplay] = useState("");
   const [priceDisplay, setPriceDisplay] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [brands, setBrands] = useState<Array<{ external_id: string; name: string }>>([]);
+  const [categories, setCategories] = useState<Array<{ external_id: string; name: string }>>([]);
+  const [authenticators, setAuthenticators] = useState<Array<{ external_id: string; name: string }>>([]);
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get("https://lwphsims-uat.up.railway.app/products/categories");
+        if (response.data.status.success) {
+          setCategories(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Fetch brands on component mount
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        const response = await axios.get("https://lwphsims-uat.up.railway.app/products/brands");
+        if (response.data.status.success) {
+          setBrands(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching brands:", error);
+      }
+    };
+
+    fetchBrands();
+  }, []);
+
+  // Fetch authenticators on component mount
+  useEffect(() => {
+    const fetchAuthenticators = async () => {
+      try {
+        const response = await axios.get("https://lwphsims-uat.up.railway.app/products/authenticators");
+        if (response.data.status.success) {
+          setAuthenticators(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching authenticators:", error);
+      }
+    };
+
+    fetchAuthenticators();
+  }, []);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -132,27 +207,153 @@ export default function AddNewItemPage() {
       auth_ext_id: "",
       inclusion: [],
       images: [],
-      condition_ext_id: "",
+      condition: {
+        interior: "Good",
+        exterior: "Good",
+        overall: "Good",
+        description: "",
+      },
+      stock: {
+        min_qty: 1,
+        qty_in_stock: 0,
+      },
       cost: 0,
       price: 0,
       is_consigned: false,
       consignor_ext_id: "",
       consignor_selling_price: 0,
+      consigned_date: "",
+      created_by: "admin_user",
     },
   });
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit: SubmitHandler<FormData> = async (data) => {
     try {
-      // TODO: Implement API call to create product
-      console.log("Creating product:", data);
+      setIsSubmitting(true);
+      setError(null);
+      setSuccess(null);
+
+      // Ensure stock values are numbers
+      const stockData = {
+        min_qty: Number(data.stock.min_qty),
+        qty_in_stock: Number(data.stock.qty_in_stock)
+      };
+
+      // Prepare the request payload
+      const payload = {
+        ...data,
+        stock: stockData,
+        condition: {
+          interior: data.condition.interior,
+          exterior: data.condition.exterior,
+          overall: data.condition.overall,
+          description: data.condition.description || ""
+        },
+        consigned_date: data.is_consigned ? new Date().toISOString().split('T')[0] : undefined,
+        created_by: "admin_user" // This should be replaced with actual logged-in user's ID
+      };
+
+      const response = await axios.post(
+        "https://lwphsims-uat.up.railway.app/products",
+        payload
+      );
+
+      if (response.data.status.success) {
+        setSuccess("Product successfully created!");
+        // Reset form and displays
+        form.reset();
+        setCostDisplay("");
+        setPriceDisplay("");
+        setInclusions([]);
+      } else {
+        setError(response.data.status.message || "Failed to create product");
+      }
     } catch (error) {
-      console.error("Error creating product:", error);
+      if (axios.isAxiosError(error)) {
+        if (error.response?.data?.message) {
+          setError(Array.isArray(error.response.data.message) 
+            ? error.response.data.message.join(", ") 
+            : error.response.data.message);
+        } else {
+          setError("An error occurred while creating the product");
+        }
+      } else {
+        setError("An unexpected error occurred");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleCategoryAdded = (category: { external_id: string; name: string }) => {
-    // TODO: Update categories list
-    form.setValue("category_ext_id", category.external_id);
+  const handleCategoryAdded = async (category: { external_id: string; name: string }) => {
+    try {
+      const response = await axios.post(
+        "https://lwphsims-uat.up.railway.app/products/categories",
+        {
+          name: category.name,
+          created_by: "admin_user" // This should be replaced with actual logged-in user's ID
+        }
+      );
+
+      if (response.data.status.success) {
+        // Add the new category to the list
+        setCategories(prevCategories => [...prevCategories, response.data.data]);
+        // Set the selected category
+        form.setValue("category_ext_id", response.data.data.external_id);
+      } else {
+        setError(response.data.status.message || "Failed to create category");
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.data?.message) {
+          setError(Array.isArray(error.response.data.message) 
+            ? error.response.data.message.join(", ") 
+            : error.response.data.message);
+        } else {
+          setError("An error occurred while creating the category");
+        }
+      } else {
+        setError("An unexpected error occurred");
+      }
+    }
+  };
+
+  const handleBrandAdded = (brand: { external_id: string; name: string }) => {
+    setBrands(prevBrands => [...prevBrands, brand]);
+    form.setValue("brand_ext_id", brand.external_id);
+  };
+
+  const handleAuthenticatorAdded = async (authenticator: { external_id: string; name: string }) => {
+    try {
+      const response = await axios.post(
+        "https://lwphsims-uat.up.railway.app/products/authenticators",
+        {
+          name: authenticator.name,
+          created_by: "admin_user" // This should be replaced with actual logged-in user's ID
+        }
+      );
+
+      if (response.data.status.success) {
+        // Add the new authenticator to the list
+        setAuthenticators(prevAuthenticators => [...prevAuthenticators, response.data.data]);
+        // Set the selected authenticator
+        form.setValue("auth_ext_id", response.data.data.external_id);
+      } else {
+        setError(response.data.status.message || "Failed to create authenticator");
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.data?.message) {
+          setError(Array.isArray(error.response.data.message) 
+            ? error.response.data.message.join(", ") 
+            : error.response.data.message);
+        } else {
+          setError("An error occurred while creating the authenticator");
+        }
+      } else {
+        setError("An unexpected error occurred");
+      }
+    }
   };
 
   const handleAddInclusion = (value: string) => {
@@ -177,7 +378,7 @@ export default function AddNewItemPage() {
     }
   };
 
-  const handleCostChange = (e) => {
+  const handleCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = parseCurrencyInput(e.target.value);
     const formatted = raw ? formatCurrency(raw) : "";
     setCostDisplay(formatted);
@@ -210,9 +411,6 @@ export default function AddNewItemPage() {
         </div>
 
         <Card>
-          
-
-          {itemType === "product" && (
             <CardContent className="space-y-6">
               <Separator />
               <div>
@@ -221,6 +419,18 @@ export default function AddNewItemPage() {
                   Add your product to make cost management easier (* for required fields)
                 </p>
               </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+                {success}
+              </div>
+            )}
 
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -239,8 +449,11 @@ export default function AddNewItemPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="bags">Bags</SelectItem>
-                                <SelectItem value="shoes">Shoes</SelectItem>
+                                {categories.map((category) => (
+                                  <SelectItem key={category.external_id} value={category.external_id}>
+                                    {category.name}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <Button
@@ -263,6 +476,7 @@ export default function AddNewItemPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Brand*</FormLabel>
+                        <div className="flex gap-2">
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
@@ -270,10 +484,22 @@ export default function AddNewItemPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="gucci">Gucci</SelectItem>
-                              <SelectItem value="lv">Louis Vuitton</SelectItem>
+                              {brands.map((brand) => (
+                                <SelectItem key={brand.external_id} value={brand.external_id}>
+                                  {brand.name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setIsBrandModalOpen(true)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -369,6 +595,7 @@ export default function AddNewItemPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Authenticator*</FormLabel>
+                          <div className="flex gap-2">
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
@@ -383,6 +610,15 @@ export default function AddNewItemPage() {
                               ))}
                             </SelectContent>
                           </Select>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => setIsAuthenticatorModalOpen(true)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -390,23 +626,253 @@ export default function AddNewItemPage() {
 
                     <FormField
                       control={form.control}
-                      name="condition_ext_id"
+                    name="condition.interior"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Condition*</FormLabel>
+                        <FormLabel>Interior Condition*</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select condition" />
+                              <SelectValue placeholder="Select interior condition" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="new">New</SelectItem>
-                              <SelectItem value="like_new">Like New</SelectItem>
-                              <SelectItem value="good">Good</SelectItem>
-                              <SelectItem value="fair">Fair</SelectItem>
+                            <SelectItem value="New" className="text-green-600">
+                              <div className="flex items-center gap-2">
+                                <span>New</span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Item is in perfect condition, never used</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="Good as new" className="text-emerald-600">
+                              <div className="flex items-center gap-2">
+                                <span>Good as new</span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Item shows minimal signs of use, almost like new</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="Good" className="text-blue-600">
+                              <div className="flex items-center gap-2">
+                                <span>Good</span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Item is in good condition with normal wear and tear</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="Old" className="text-amber-600">
+                              <div className="flex items-center gap-2">
+                                <span>Old</span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Item shows significant wear and signs of age</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </SelectItem>
                             </SelectContent>
                           </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                  <FormField
+                    control={form.control}
+                    name="condition.exterior"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Exterior Condition*</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select exterior condition" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="New" className="text-green-600">
+                              <div className="flex items-center gap-2">
+                                <span>New</span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Item is in perfect condition, never used</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="Good as new" className="text-emerald-600">
+                              <div className="flex items-center gap-2">
+                                <span>Good as new</span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Item shows minimal signs of use, almost like new</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="Good" className="text-blue-600">
+                              <div className="flex items-center gap-2">
+                                <span>Good</span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Item is in good condition with normal wear and tear</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="Old" className="text-amber-600">
+                              <div className="flex items-center gap-2">
+                                <span>Old</span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Item shows significant wear and signs of age</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="condition.overall"
+                      render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Overall Condition*</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                              <SelectValue placeholder="Select overall condition" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value="New" className="text-green-600">
+                              <div className="flex items-center gap-2">
+                                <span>New</span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Item is in perfect condition, never used</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="Good as new" className="text-emerald-600">
+                              <div className="flex items-center gap-2">
+                                <span>Good as new</span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Item shows minimal signs of use, almost like new</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="Good" className="text-blue-600">
+                              <div className="flex items-center gap-2">
+                                <span>Good</span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Item is in good condition with normal wear and tear</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="Old" className="text-amber-600">
+                              <div className="flex items-center gap-2">
+                                <span>Old</span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Info className="h-4 w-4" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Item shows significant wear and signs of age</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                  <FormField
+                    control={form.control}
+                    name="condition.description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} />
+                        </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -518,6 +984,58 @@ export default function AddNewItemPage() {
                         />
                       </>
                     )}
+
+                  <FormField
+                    control={form.control}
+                    name="stock.min_qty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Minimum Quantity*</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min={0}
+                            step="1"
+                            {...field}
+                            onChange={(e) => {
+                              const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                              field.onChange(value);
+                            }}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          The minimum quantity that should be maintained in stock
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="stock.qty_in_stock"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Quantity in Stock*</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min={0}
+                            step="1"
+                            {...field}
+                            onChange={(e) => {
+                              const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                              field.onChange(value);
+                            }}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Current quantity available in stock
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   </div>
 
                   <div className="space-y-4">
@@ -586,11 +1104,11 @@ export default function AddNewItemPage() {
                   </div>
 
                   <div className="flex justify-end gap-2 pt-4">
-                    <Button type="submit">
+                  <Button type="submit" disabled={isSubmitting}>
                       <Save className="mr-2 h-4 w-4" />
-                      Save Product
+                    {isSubmitting ? "Saving..." : "Save Product"}
                     </Button>
-                    <Button type="submit" variant="outline">
+                  <Button type="submit" variant="outline" disabled={isSubmitting}>
                       Save & Add New Product
                     </Button>
                     <Link href="/inventory" passHref>
@@ -600,24 +1118,6 @@ export default function AddNewItemPage() {
                 </form>
               </Form>
             </CardContent>
-          )}
-
-          {itemType === "service" && (
-            <CardContent className="space-y-6">
-              <Separator />
-              <div className="text-center py-10">
-                <p className="text-muted-foreground">Service fields will go here.</p>
-              </div>
-              <Separator />
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="default">Save Service</Button>
-                <Button variant="outline">Save & Add New Service</Button>
-                <Link href="/inventory" passHref>
-                  <Button variant="ghost">Cancel</Button>
-                </Link>
-              </div>
-            </CardContent>
-          )}
         </Card>
       </div>
 
@@ -625,6 +1125,18 @@ export default function AddNewItemPage() {
         isOpen={isCategoryModalOpen}
         onClose={() => setIsCategoryModalOpen(false)}
         onCategoryAdded={handleCategoryAdded}
+      />
+
+      <ProductBrandModal
+        isOpen={isBrandModalOpen}
+        onClose={() => setIsBrandModalOpen(false)}
+        onBrandAdded={handleBrandAdded}
+      />
+
+      <ProductAuthenticatorModal
+        isOpen={isAuthenticatorModalOpen}
+        onClose={() => setIsAuthenticatorModalOpen(false)}
+        onAuthenticatorAdded={handleAuthenticatorAdded}
       />
     </>
   );

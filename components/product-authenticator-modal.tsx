@@ -13,30 +13,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 
-interface ProductCategoryModalProps {
+interface ProductAuthenticatorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCategoryAdded: (category: { external_id: string; name: string }) => void;
+  onAuthenticatorAdded: (authenticator: { external_id: string; name: string }) => void;
 }
 
-export function ProductCategoryModal({
+export function ProductAuthenticatorModal({
   isOpen,
   onClose,
-  onCategoryAdded,
-}: ProductCategoryModalProps) {
-  const [categoryName, setCategoryName] = useState("");
+  onAuthenticatorAdded,
+}: ProductAuthenticatorModalProps) {
+  const [authenticatorName, setAuthenticatorName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!categoryName.trim()) {
-      setError("Category name is required");
+    if (!authenticatorName.trim()) {
+      setError("Authenticator name is required");
       return;
     }
 
-    if (categoryName.length > 100) {
-      setError("Category name must not exceed 100 characters");
+    if (authenticatorName.length > 100) {
+      setError("Authenticator name must not exceed 100 characters");
       return;
     }
 
@@ -44,11 +44,11 @@ export function ProductCategoryModal({
     setError(null);
 
     try {
-      onCategoryAdded({ external_id: "", name: categoryName });
-      setCategoryName("");
+      onAuthenticatorAdded({ external_id: "", name: authenticatorName });
+      setAuthenticatorName("");
       onClose();
     } catch (error) {
-      setError("Failed to create category");
+      setError("Failed to create authenticator");
     } finally {
       setIsSubmitting(false);
     }
@@ -58,20 +58,20 @@ export function ProductCategoryModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add New Category</DialogTitle>
+          <DialogTitle>Add New Authenticator</DialogTitle>
           <DialogDescription>
-            Create a new product category. The category name must be unique.
+            Create a new product authenticator. The authenticator name must be unique.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="categoryName">Category Name</Label>
+            <Label htmlFor="authenticatorName">Authenticator Name</Label>
             <Input
-              id="categoryName"
-              value={categoryName}
-              onChange={(e) => setCategoryName(e.target.value)}
-              placeholder="Enter category name"
+              id="authenticatorName"
+              value={authenticatorName}
+              onChange={(e) => setAuthenticatorName(e.target.value)}
+              placeholder="Enter authenticator name"
               maxLength={100}
             />
             {error && (
@@ -90,7 +90,7 @@ export function ProductCategoryModal({
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               <Plus className="mr-2 h-4 w-4" />
-              {isSubmitting ? "Adding..." : "Add Category"}
+              {isSubmitting ? "Adding..." : "Add Authenticator"}
             </Button>
           </div>
         </form>

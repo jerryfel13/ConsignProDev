@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Box,
@@ -22,65 +22,74 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import { ItemsTable } from "@/components/items-table";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { toast } from "sonner";
 
 const LOW_STOCK_THRESHOLD = 5;
 
-type InventoryItem = {
-  id: string;
+type Product = {
+  stock_external_id: string;
+  product_external_id: string;
+  category: {
+    code: string;
+    name: string;
+  };
+  brand: {
+    code: string;
+    name: string;
+  };
   name: string;
-  sku: string;
-  stock: number;
-  consigned: boolean;
-  layaway: boolean;
+  material: string;
+  hardware: string;
+  code: string;
+  measurement: string;
+  model: string;
+  authenticator: {
+    code: string;
+    name: string;
+  };
+  inclusions: string[];
+  images: string[];
+  condition: {
+    interior: string;
+    exterior: string;
+    overall: string;
+    description: string;
+  };
+  cost: string;
+  price: string;
+  stock: {
+    min_qty: number;
+    qty_in_stock: number;
+    sold_stock: number;
+  };
+  is_consigned: boolean;
+  consignor?: {
+    code: string;
+    first_name: string;
+    last_name: string;
+  };
+  consignor_selling_price?: string;
+  consigned_date?: string;
+  created_at: string;
+  created_by: string;
+  updated_at: string;
+  updated_by: string | null;
+  deleted_at: string | null;
+  deleted_by: string | null;
 };
-
-const initialItems: InventoryItem[] = [
-    {
-      id: "1",
-    name: "Louis Vuitton Neverfull MM",
-    sku: "LV-NF-001",
-    stock: 0,
-    consigned: true,
-    layaway: true,
-    },
-    {
-      id: "2",
-    name: "Rolex Datejust 41",
-    sku: "RLX-DJ-002",
-    stock: 3,
-    consigned: true,
-    layaway: false,
-  },
-  {
-    id: "3",
-    name: "Gucci Marmont Bag",
-    sku: "GCC-MMT-003",
-    stock: 10,
-    consigned: false,
-    layaway: true,
-  },
-];
 
 export default function InventoryPage() {
   const router = useRouter();
-  const [items, setItems] = useState<InventoryItem[]>(initialItems);
+  const [products, setProducts] = useState<Product[]>([]);
   const [filters, setFilters] = useState({
     consigned: false,
     layaway: false,
@@ -88,62 +97,108 @@ export default function InventoryPage() {
     lowStock: false,
   });
   const [search, setSearch] = useState("");
-  const [showAdd, setShowAdd] = useState(false);
-  const [editItem, setEditItem] = useState<InventoryItem | null>(null);
-  const [showRestock, setShowRestock] = useState<InventoryItem | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    totalNumber: 0,
+    totalPages: 1,
+    displayPage: 10,
+  });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Fetch products
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axios.get("https://lwphsims-uat.up.railway.app/products", {
+          params: {
+            searchValue: search,
+            isConsigned: filters.consigned ? "Y" : "N",
+            pageNumber: pagination.page,
+            displayPerPage: pagination.displayPage,
+            sortBy: "name",
+            orderBy: "asc",
+          },
+        });
+
+        if (response.data.status.success) {
+          setProducts(response.data.data);
+          setPagination(response.data.meta);
+        } else {
+          setError("Failed to fetch products");
+        }
+      } catch (error) {
+        setError("An error occurred while fetching products");
+        console.error("Error fetching products:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [search, filters, pagination.page]);
 
   // Filtering logic
-  const filteredItems = items.filter((item) => {
-    if (filters.consigned && !item.consigned) return false;
-    if (filters.layaway && !item.layaway) return false;
-    if (filters.outOfStock && item.stock > 0) return false;
-    if (filters.lowStock && (item.stock >= LOW_STOCK_THRESHOLD || item.stock === 0)) return false;
-    if (search && !item.name.toLowerCase().includes(search.toLowerCase()) && !item.sku.toLowerCase().includes(search.toLowerCase())) return false;
+  const filteredProducts = products.filter((product) => {
+    if (filters.outOfStock && product.stock.qty_in_stock > 0) return false;
+    if (filters.lowStock && (product.stock.qty_in_stock >= LOW_STOCK_THRESHOLD || product.stock.qty_in_stock === 0)) return false;
     return true;
   });
 
-  const outOfStockCount = items.filter((i) => i.stock === 0).length;
-  const lowStockCount = items.filter((i) => i.stock > 0 && i.stock < LOW_STOCK_THRESHOLD).length;
-  const allItemsCount = items.length;
+  const outOfStockCount = products.filter((p) => p.stock.qty_in_stock === 0).length;
+  const lowStockCount = products.filter((p) => p.stock.qty_in_stock > 0 && p.stock.qty_in_stock < LOW_STOCK_THRESHOLD).length;
+  const allItemsCount = products.length;
 
-  // Add Product logic
-  function handleAddProduct(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = e.target as HTMLFormElement & {
-      name: { value: string };
-      sku: { value: string };
-      stock: { value: string };
-      consigned: { checked: boolean };
-      layaway: { checked: boolean };
-    };
-    const newItem: InventoryItem = {
-      id: Date.now().toString(),
-      name: form.name.value,
-      sku: form.sku.value,
-      stock: Number(form.stock.value),
-      consigned: form.consigned.checked,
-      layaway: form.layaway.checked,
-    };
-    setItems((prev) => [...prev, newItem]);
-    setShowAdd(false);
-  }
+  const handleDeleteClick = (stock_external_id: string) => {
+    setDeleteId(stock_external_id);
+    setShowDeleteModal(true);
+  };
 
-  // Restock logic
-  function handleRestock(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = e.target as HTMLFormElement & {
-      amount: { value: string };
-    };
-    const amount = Number(form.amount.value);
-    setItems((prev) =>
-      prev.map((item) =>
-        showRestock && item.id === showRestock.id
-          ? { ...item, stock: Math.max(0, item.stock + amount) }
-          : item
-      )
-    );
-    setShowRestock(null);
-  }
+  const handleDeleteConfirm = async () => {
+    if (!deleteId) return;
+    setShowDeleteModal(false);
+    setDeletingId(deleteId);
+    try {
+      const response = await axios.delete(
+        `https://lwphsims-uat.up.railway.app/products/id/${deleteId}`,
+        { data: { deleted_by: "admin_user" } }
+      );
+      if (response.data.status.success) {
+        toast(
+          <div className="px-5 py-4 flex flex-col items-center bg-white rounded-lg border border-gray-200 shadow-lg">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-3">
+              <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </div>
+            <h4 className="text-center font-medium text-lg text-gray-900 mb-1">
+              Product Deleted
+            </h4>
+            <p className="text-center text-gray-600 mb-2">
+              The product was successfully deleted.
+            </p>
+          </div>,
+          {
+            position: "top-center",
+            duration: 2000,
+            className: "!bg-transparent !shadow-none !p-0 !rounded-none",
+          }
+        );
+        setProducts((prev) => prev.filter((p) => p.stock_external_id !== deleteId));
+      } else {
+        toast.error(response.data.status.message || "Failed to delete product.");
+      }
+    } catch (error) {
+      toast.error("An error occurred while deleting the product.");
+    } finally {
+      setDeletingId(null);
+      setDeleteId(null);
+    }
+  };
 
   return (
     <>
@@ -164,9 +219,9 @@ export default function InventoryPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                   <Link href="/inventory/new" className="flex items-center">
-                     <Plus className="mr-2 h-4 w-4" /> Add item manually
-                   </Link>
+                  <Link href="/inventory/new" className="flex items-center">
+                    <Plus className="mr-2 h-4 w-4" /> Add item manually
+                  </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -207,114 +262,106 @@ export default function InventoryPage() {
                 <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
                     <th className="p-3 text-left align-middle w-[220px] font-semibold text-gray-700 border-b">Name</th>
-                    <th className="p-3 text-left align-middle w-[120px] font-semibold text-gray-700 border-b">SKU</th>
+                    <th className="p-3 text-left align-middle w-[120px] font-semibold text-gray-700 border-b">Category</th>
+                    <th className="p-3 text-left align-middle w-[120px] font-semibold text-gray-700 border-b">Brand</th>
                     <th className="p-3 text-left align-middle w-[80px] font-semibold text-gray-700 border-b">Stock</th>
+                    <th className="p-3 text-left align-middle w-[110px] font-semibold text-gray-700 border-b">Price</th>
                     <th className="p-3 text-left align-middle w-[110px] font-semibold text-gray-700 border-b">Consigned</th>
-                    <th className="p-3 text-left align-middle w-[110px] font-semibold text-gray-700 border-b">Layaway</th>
                     <th className="p-3 text-left align-middle w-[160px] font-semibold text-gray-700 border-b">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredItems.length === 0 ? (
+                  {isLoading ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-8 text-gray-400">No items found.</td>
+                      <td colSpan={7} className="text-center py-8 text-gray-400">Loading...</td>
+                    </tr>
+                  ) : error ? (
+                    <tr>
+                      <td colSpan={7} className="text-center py-8 text-red-400">{error}</td>
+                    </tr>
+                  ) : filteredProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="text-center py-8 text-gray-400">No items found.</td>
                     </tr>
                   ) : (
-                    filteredItems.map((item, idx) => (
+                    filteredProducts.map((product, idx) => (
                       <tr
-                        key={item.id}
+                        key={product.product_external_id}
                         className={
                           idx % 2 === 0
                             ? "bg-white hover:bg-gray-50 border-b"
                             : "bg-gray-50 hover:bg-gray-100 border-b"
                         }
                       >
-                        <td className="p-3 text-left align-middle w-[220px] truncate max-w-[200px]">{item.name}</td>
-                        <td className="p-3 text-left align-middle w-[120px] truncate max-w-[100px]">{item.sku}</td>
-                        <td className="p-3 text-left align-middle w-[80px]">{item.stock}</td>
-                        <td className="p-3 text-left align-middle w-[110px]">{item.consigned ? "Yes" : "No"}</td>
-                        <td className="p-3 text-left align-middle w-[110px]">{item.layaway ? "Yes" : "No"}</td>
+                        <td className="p-3 text-left align-middle w-[220px] truncate max-w-[200px]">{product.name}</td>
+                        <td className="p-3 text-left align-middle w-[120px] truncate max-w-[100px]">{product.category.name}</td>
+                        <td className="p-3 text-left align-middle w-[120px] truncate max-w-[100px]">{product.brand.name}</td>
+                        <td className="p-3 text-left align-middle w-[80px]">{product.stock.qty_in_stock}</td>
+                        <td className="p-3 text-left align-middle w-[110px]">₱{Number(product.price).toLocaleString()}</td>
+                        <td className="p-3 text-left align-middle w-[110px]">{product.is_consigned ? "Yes" : "No"}</td>
                         <td className="p-3 text-left align-middle w-[160px] flex items-center gap-2 justify-start">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
                               <Button size="icon" variant="ghost" className="h-8 w-8 p-0">
                                 <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => router.push(`/inventory/${item.id}`)}>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => router.push(`/inventory/${product.stock_external_id}`)}>
                                 <Eye className="mr-2 h-4 w-4" /> View
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={e => { e.stopPropagation(); setEditItem(item); }}>
+                              <DropdownMenuItem onClick={() => router.push(`/inventory/${product.stock_external_id}/edit`)}>
                                 <Pencil className="mr-2 h-4 w-4" /> Edit
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={e => { e.stopPropagation(); if (window.confirm('Are you sure you want to delete this item?')) setItems(prev => prev.filter(i => i.id !== item.id)); }} className="text-red-600 focus:text-red-600">
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() => handleDeleteClick(product.stock_external_id)}
+                                disabled={deletingId === product.stock_external_id}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {deletingId === product.stock_external_id ? "Deleting..." : "Delete"}
                               </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
-              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Add Product Modal */}
-      {showAdd && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <form onSubmit={handleAddProduct} className="bg-white p-6 rounded shadow-md min-w-[300px]">
-            <h2 className="text-lg font-bold mb-4">Add Product</h2>
-            <div className="mb-2">
-              <label className="block mb-1">Name</label>
-              <input name="name" className="border p-2 w-full" required />
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-sm flex flex-col items-center">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-3">
+              <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
             </div>
-            <div className="mb-2">
-              <label className="block mb-1">SKU</label>
-              <input name="sku" className="border p-2 w-full" required />
+            <h4 className="text-center font-medium text-lg text-gray-900 mb-1">
+              Confirm Delete
+            </h4>
+            <p className="text-center text-gray-600 mb-4">
+              Are you sure you want to delete this product? This action cannot be undone.
+            </p>
+            <div className="flex w-full gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 py-2 border border-gray-300 text-gray-500 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                No
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="flex-1 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+              >
+                Yes, Delete
+              </button>
             </div>
-            <div className="mb-2">
-              <label className="block mb-1">Stock</label>
-              <input name="stock" type="number" min="0" className="border p-2 w-full" required />
-            </div>
-            <div className="mb-2 flex gap-4">
-              <label><input type="checkbox" name="consigned" /> Consigned</label>
-              <label><input type="checkbox" name="layaway" /> Layaway</label>
-            </div>
-            <div className="flex gap-2 mt-4">
-              <Button type="submit">Add</Button>
-              <Button type="button" variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Edit Product Modal */}
-      {editItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          {/* You can reuse the Add Product form here, pre-filled with editItem's data, and update on submit */}
-          {/* ... implement edit form ... */}
-        </div>
-      )}
-
-      {/* Restock Modal */}
-      {showRestock && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <form onSubmit={handleRestock} className="bg-white p-6 rounded shadow-md min-w-[300px]">
-            <h2 className="text-lg font-bold mb-4">Restock: {showRestock.name}</h2>
-            <div className="mb-2">
-              <label className="block mb-1">Amount (+/-)</label>
-              <input name="amount" type="number" defaultValue={1} className="border p-2 w-full" required />
-            </div>
-            <div className="flex gap-2 mt-4">
-              <Button type="submit">Apply</Button>
-              <Button type="button" variant="outline" onClick={() => setShowRestock(null)}>Cancel</Button>
-            </div>
-          </form>
+          </div>
         </div>
       )}
     </>
