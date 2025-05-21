@@ -1,41 +1,14 @@
 "use client";
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, Download } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import axios from "axios";
 // Assume you have a useUser hook
 // import { useUser } from "@/hooks/useUser";
-
-const mockItems = [
-  {
-    id: "1",
-    name: "Louis Vuitton Neverfull MM",
-    minStock: 2,
-    stock: 10,
-    sold: 5,
-    price: 1000.0,
-  },
-  {
-    id: "2",
-    name: "Rolex Datejust 41",
-    minStock: 1,
-    stock: 0,
-    sold: 2,
-    price: 5000.0,
-  },
-  {
-    id: "3",
-    name: "Gucci Marmont Bag",
-    minStock: 3,
-    stock: 3,
-    sold: 1,
-    price: 2000.0,
-  },
-  // Add more mock items as needed
-];
 
 const QUERY_OPTIONS = [
   { value: "all", label: "Show all stocks" },
@@ -57,27 +30,57 @@ export default function StockAnalysisPage() {
   const [queryType, setQueryType] = useState("less");
   const [queryValue, setQueryValue] = useState("");
   const [sort, setSort] = useState("recent");
-  const [results, setResults] = useState(mockItems);
+  const [products, setProducts] = useState<any[]>([]);
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   // const user = useUser();
   const user = { name: "John Doe", email: "john@example.com" }; // Replace with real hook
 
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await axios.get("https://lwphsims-uat.up.railway.app/products", {
+          params: {
+            sortBy: "name",
+            orderBy: "asc",
+            displayPerPage: 1000, // fetch all for analysis
+          },
+        });
+        if (response.data.status.success) {
+          setProducts(response.data.data);
+          setResults(response.data.data);
+        } else {
+          setError("Failed to fetch products");
+        }
+      } catch (err) {
+        setError("An error occurred while fetching products");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
   function runQuery() {
-    let filtered = [...mockItems];
+    let filtered = [...products];
     if (queryType === "less" && queryValue) {
-      filtered = filtered.filter(i => i.stock < Number(queryValue));
+      filtered = filtered.filter(i => i.stock?.qty_in_stock < Number(queryValue));
     } else if (queryType === "greater" && queryValue) {
-      filtered = filtered.filter(i => i.stock > Number(queryValue));
+      filtered = filtered.filter(i => i.stock?.qty_in_stock > Number(queryValue));
     } else if (queryType === "low") {
-      filtered = filtered.filter(i => i.stock > 0 && i.stock <= 3); // Example threshold
+      filtered = filtered.filter(i => i.stock?.qty_in_stock > 0 && i.stock?.qty_in_stock <= i.stock?.min_qty);
     } else if (queryType === "all") {
-      filtered = [...mockItems];
+      filtered = [...products];
     } else if (queryType === "expiry") {
-      filtered = []; // Not implemented in mock
+      filtered = []; // Not implemented
     }
     // Sorting
     if (sort === "name") filtered.sort((a, b) => a.name.localeCompare(b.name));
-    if (sort === "stockLow") filtered.sort((a, b) => a.stock - b.stock);
-    if (sort === "stockHigh") filtered.sort((a, b) => b.stock - a.stock);
+    if (sort === "stockLow") filtered.sort((a, b) => a.stock?.qty_in_stock - b.stock?.qty_in_stock);
+    if (sort === "stockHigh") filtered.sort((a, b) => b.stock?.qty_in_stock - a.stock?.qty_in_stock);
     setResults(filtered);
   }
 
@@ -114,10 +117,10 @@ export default function StockAnalysisPage() {
         head: [["Item name", "Minimum Stock", "Available Stock", "Quantity Sold", "Unit price"]],
         body: results.map(item => [
           item.name,
-          item.minStock,
-          item.stock,
-          item.sold,
-          `PHP ${item.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+          item.stock?.min_qty ?? '-',
+          item.stock?.qty_in_stock ?? '-',
+          item.stock?.sold_stock ?? '-',
+          `PHP ${Number(item.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
         ]),
       });
       doc.save("stock-analysis.pdf");
@@ -193,12 +196,12 @@ export default function StockAnalysisPage() {
                   </tr>
                 ) : (
                   results.map(item => (
-                    <tr key={item.id} className="border-b">
+                    <tr key={item.product_external_id} className="border-b">
                       <td className="px-4 py-2">{item.name}</td>
-                      <td className="px-4 py-2">{item.minStock}</td>
-                      <td className="px-4 py-2">{item.stock}</td>
-                      <td className="px-4 py-2">{item.sold}</td>
-                      <td className="px-4 py-2">PHP {item.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-2">{item.stock?.min_qty ?? '-'}</td>
+                      <td className="px-4 py-2">{item.stock?.qty_in_stock ?? '-'}</td>
+                      <td className="px-4 py-2">{item.stock?.sold_stock ?? '-'}</td>
+                      <td className="px-4 py-2">PHP {Number(item.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     </tr>
                   ))
                 )}

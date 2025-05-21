@@ -114,17 +114,21 @@ export default function InventoryPage() {
     const fetchProducts = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get("https://lwphsims-uat.up.railway.app/products", {
-          params: {
-            searchValue: search,
-            isConsigned: filters.consigned ? "Y" : "N",
-            pageNumber: pagination.page,
-            displayPerPage: pagination.displayPage,
-            sortBy: "name",
-            orderBy: "asc",
-          },
-        });
-
+        let params: any = {
+          searchValue: search,
+          isConsigned: filters.consigned ? "Y" : "N",
+          pageNumber: pagination.page,
+          displayPerPage: pagination.displayPage,
+          sortBy: "name",
+          orderBy: "asc",
+        };
+        if (filters.lowStock) {
+          params.isLowStock = "y";
+        }
+        if (filters.outOfStock) {
+          params.isOutOfStock = "y";
+        }
+        const response = await axios.get("https://lwphsims-uat.up.railway.app/products", { params });
         if (response.data.status.success) {
           setProducts(response.data.data);
           setPagination(response.data.meta);
@@ -143,14 +147,49 @@ export default function InventoryPage() {
   }, [search, filters, pagination.page]);
 
   // Filtering logic
-  const filteredProducts = products.filter((product) => {
-    if (filters.outOfStock && product.stock.qty_in_stock > 0) return false;
-    if (filters.lowStock && (product.stock.qty_in_stock >= LOW_STOCK_THRESHOLD || product.stock.qty_in_stock === 0)) return false;
-    return true;
-  });
+  const filteredProducts = products;
 
-  const outOfStockCount = products.filter((p) => p.stock.qty_in_stock === 0).length;
-  const lowStockCount = products.filter((p) => p.stock.qty_in_stock > 0 && p.stock.qty_in_stock < LOW_STOCK_THRESHOLD).length;
+  // Out of stock count
+  const [outOfStockCount, setOutOfStockCount] = useState(0);
+  useEffect(() => {
+    const fetchOutOfStockCount = async () => {
+      if (filters.outOfStock) {
+        setOutOfStockCount(products.length);
+      } else {
+        try {
+          const response = await axios.get("https://lwphsims-uat.up.railway.app/products", { params: { isOutOfStock: "y" } });
+          if (response.data.status.success) {
+            setOutOfStockCount(response.data.data.length);
+          }
+        } catch {
+          setOutOfStockCount(0);
+        }
+      }
+    };
+    fetchOutOfStockCount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.outOfStock, products]);
+
+  // For low stock count, fetch from API if not filtering, otherwise use products.length
+  const [lowStockCount, setLowStockCount] = useState(0);
+  useEffect(() => {
+    const fetchLowStockCount = async () => {
+      if (filters.lowStock) {
+        setLowStockCount(products.length);
+      } else {
+        try {
+          const response = await axios.get("https://lwphsims-uat.up.railway.app/products", { params: { isLowStock: "y" } });
+          if (response.data.status.success) {
+            setLowStockCount(response.data.data.length);
+          }
+        } catch {
+          setLowStockCount(0);
+        }
+      }
+    };
+    fetchLowStockCount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.lowStock, products]);
   const allItemsCount = products.length;
 
   const handleDeleteClick = (stock_external_id: string) => {
@@ -219,9 +258,9 @@ export default function InventoryPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href="/inventory/new" className="flex items-center">
-                    <Plus className="mr-2 h-4 w-4" /> Add item manually
-                  </Link>
+                   <Link href="/inventory/new" className="flex items-center">
+                     <Plus className="mr-2 h-4 w-4" /> Add item manually
+                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -300,13 +339,13 @@ export default function InventoryPage() {
                         <td className="p-3 text-left align-middle w-[110px]">₱{Number(product.price).toLocaleString()}</td>
                         <td className="p-3 text-left align-middle w-[110px]">{product.is_consigned ? "Yes" : "No"}</td>
                         <td className="p-3 text-left align-middle w-[160px] flex items-center gap-2 justify-start">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
                               <Button size="icon" variant="ghost" className="h-8 w-8 p-0">
                                 <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => router.push(`/inventory/${product.stock_external_id}`)}>
                                 <Eye className="mr-2 h-4 w-4" /> View
                               </DropdownMenuItem>
@@ -321,15 +360,15 @@ export default function InventoryPage() {
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 {deletingId === product.stock_external_id ? "Deleting..." : "Delete"}
                               </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                         </td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
-            </div>
+              </div>
           </CardContent>
         </Card>
       </div>

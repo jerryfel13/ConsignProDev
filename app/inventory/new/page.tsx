@@ -19,6 +19,7 @@ import {
   Plus,
   Tag,
   X,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +61,17 @@ import { Badge } from "@/components/ui/badge";
 import { ProductCategoryModal } from "@/components/product-category-modal";
 import { ProductBrandModal } from "@/components/product-brand-modal";
 import { ProductAuthenticatorModal } from "@/components/product-authenticator-modal";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+  DroppableProvided,
+  DraggableProvided,
+  DraggableStateSnapshot
+} from "@hello-pangea/dnd";
+import Image from "next/image";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   category_ext_id: z.string().min(1, "Category is required"),
@@ -74,15 +86,15 @@ const formSchema = z.object({
   inclusion: z.array(z.string()),
   images: z.array(z.string()),
   condition: z.object({
-    interior: z.enum(["Good", "Good as new", "New", "Old"], {
-      required_error: "Please select interior condition",
-    }),
-    exterior: z.enum(["Good", "Good as new", "New", "Old"], {
-      required_error: "Please select exterior condition",
-    }),
-    overall: z.enum(["Good", "Good as new", "New", "Old"], {
-      required_error: "Please select overall condition",
-    }),
+    interior: z.string().min(1, 
+      "Please enter interior condition",
+    ),
+    exterior: z.string().min(1, 
+      "Please enter exterior condition",
+    ),
+    overall: z.string().min(1, 
+      "Please enter overall condition",
+    ),
     description: z.string().optional(),
   }),
   stock: z.object({
@@ -144,6 +156,104 @@ export default function AddNewItemPage() {
   const [brands, setBrands] = useState<Array<{ external_id: string; name: string }>>([]);
   const [categories, setCategories] = useState<Array<{ external_id: string; name: string }>>([]);
   const [authenticators, setAuthenticators] = useState<Array<{ external_id: string; name: string }>>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [pendingImages, setPendingImages] = useState<File[]>([]);
+  const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([]);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+  const validateFile = (file: File): boolean => {
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      toast.error(`Invalid file type. Allowed types: ${ALLOWED_FILE_TYPES.join(', ')}`);
+      return false;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(`File size exceeds 5MB limit`);
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Validate each file
+    const validFiles = Array.from(files).filter(validateFile);
+    if (validFiles.length === 0) return;
+
+    // Create preview URLs for valid files
+    const newPreviewUrls = validFiles.map(file => URL.createObjectURL(file));
+    setPreviewUrls(prev => [...prev, ...newPreviewUrls]);
+    
+    // Store valid files in pending state
+    setPendingImages(prev => [...prev, ...validFiles]);
+  };
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const { source, destination } = result;
+    
+    // Handle pending images reordering
+    if (source.droppableId === 'pending' && destination.droppableId === 'pending') {
+      const newPendingImages = Array.from(pendingImages);
+      const newPreviewUrls = Array.from(previewUrls);
+      
+      const [removedImage] = newPendingImages.splice(source.index, 1);
+      const [removedUrl] = newPreviewUrls.splice(source.index, 1);
+      
+      newPendingImages.splice(destination.index, 0, removedImage);
+      newPreviewUrls.splice(destination.index, 0, removedUrl);
+      
+      setPendingImages(newPendingImages);
+      setPreviewUrls(newPreviewUrls);
+    }
+  };
+
+  const removePendingImage = (index: number) => {
+    setPendingImages(prev => prev.filter((_, i) => i !== index));
+    setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadImagesToCloudinary = async (files: File[]): Promise<string[]> => {
+    try {
+      const uploadPromises = files.map(async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || '');
+
+        const response = await axios.post(
+          `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+          formData
+        );
+
+        if (!response.data.secure_url) {
+          throw new Error('No secure URL returned from Cloudinary');
+        }
+
+        return response.data.secure_url;
+      });
+
+      const urls = await Promise.all(uploadPromises);
+      return urls;
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      throw new Error('Failed to upload images');
+    }
+  };
+
+  // Cleanup preview URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
 
   // Fetch categories on component mount
   useEffect(() => {
@@ -208,9 +318,9 @@ export default function AddNewItemPage() {
       inclusion: [],
       images: [],
       condition: {
-        interior: "Good",
-        exterior: "Good",
-        overall: "Good",
+        interior: "1",
+        exterior: "1",
+        overall: "1",
         description: "",
       },
       stock: {
@@ -233,6 +343,21 @@ export default function AddNewItemPage() {
       setError(null);
       setSuccess(null);
 
+      // First, upload any pending images to Cloudinary
+      let newImageUrls: string[] = [];
+      if (pendingImages.length > 0) {
+        try {
+          setUploadingImages(true);
+          newImageUrls = await uploadImagesToCloudinary(pendingImages);
+          setUploadingImages(false);
+    } catch (error) {
+          console.error("Error uploading images:", error);
+          toast.error("Failed to upload images. Please try again.");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       // Ensure stock values are numbers
       const stockData = {
         min_qty: Number(data.stock.min_qty),
@@ -243,6 +368,7 @@ export default function AddNewItemPage() {
       const payload = {
         ...data,
         stock: stockData,
+        images: newImageUrls,
         condition: {
           interior: data.condition.interior,
           exterior: data.condition.exterior,
@@ -265,6 +391,8 @@ export default function AddNewItemPage() {
         setCostDisplay("");
         setPriceDisplay("");
         setInclusions([]);
+        setPendingImages([]);
+        setPreviewUrls([]);
       } else {
         setError(response.data.status.message || "Failed to create product");
       }
@@ -626,253 +754,106 @@ export default function AddNewItemPage() {
 
                     <FormField
                       control={form.control}
-                    name="condition.interior"
+                      name="condition.interior"
                       render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Interior Condition*</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                              <SelectValue placeholder="Select interior condition" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            <SelectItem value="New" className="text-green-600">
-                              <div className="flex items-center gap-2">
-                                <span>New</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Info className="h-4 w-4" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Item is in perfect condition, never used</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Good as new" className="text-emerald-600">
-                              <div className="flex items-center gap-2">
-                                <span>Good as new</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Info className="h-4 w-4" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Item shows minimal signs of use, almost like new</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Good" className="text-blue-600">
-                              <div className="flex items-center gap-2">
-                                <span>Good</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Info className="h-4 w-4" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Item is in good condition with normal wear and tear</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Old" className="text-amber-600">
-                              <div className="flex items-center gap-2">
-                                <span>Old</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Info className="h-4 w-4" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Item shows significant wear and signs of age</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            </SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>Interior Condition*</FormLabel>
+                          <div className="space-y-1">
+                            <Input
+                              id="interior"
+                              type="number"
+                              min="1"
+                              max="10"
+                              value={field.value}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
+                                  field.onChange(value);
+                                  // Calculate overall condition
+                                  const exterior = Number(form.getValues("condition.exterior") || "10");
+                                  const overall = Math.round((Number(value) + exterior) * 5);
+                                  form.setValue("condition.overall", overall.toString());
+                                }
+                              }}
+                              placeholder="Enter value from 1-10"
+                            />
+                            <p className="text-xs text-gray-500">Enter a value between 1 and 10</p>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
 
-                  <FormField
-                    control={form.control}
-                    name="condition.exterior"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Exterior Condition*</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select exterior condition" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="New" className="text-green-600">
-                              <div className="flex items-center gap-2">
-                                <span>New</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Info className="h-4 w-4" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Item is in perfect condition, never used</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Good as new" className="text-emerald-600">
-                              <div className="flex items-center gap-2">
-                                <span>Good as new</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Info className="h-4 w-4" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Item shows minimal signs of use, almost like new</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Good" className="text-blue-600">
-                              <div className="flex items-center gap-2">
-                                <span>Good</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Info className="h-4 w-4" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Item is in good condition with normal wear and tear</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Old" className="text-amber-600">
-                              <div className="flex items-center gap-2">
-                                <span>Old</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Info className="h-4 w-4" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Item shows significant wear and signs of age</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="condition.overall"
+                    <FormField
+                      control={form.control}
+                      name="condition.exterior"
                       render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Overall Condition*</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                              <SelectValue placeholder="Select overall condition" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            <SelectItem value="New" className="text-green-600">
-                              <div className="flex items-center gap-2">
-                                <span>New</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Info className="h-4 w-4" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Item is in perfect condition, never used</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Good as new" className="text-emerald-600">
-                              <div className="flex items-center gap-2">
-                                <span>Good as new</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Info className="h-4 w-4" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Item shows minimal signs of use, almost like new</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Good" className="text-blue-600">
-                              <div className="flex items-center gap-2">
-                                <span>Good</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Info className="h-4 w-4" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Item is in good condition with normal wear and tear</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Old" className="text-amber-600">
-                              <div className="flex items-center gap-2">
-                                <span>Old</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Info className="h-4 w-4" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Item shows significant wear and signs of age</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            </SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>Exterior Condition*</FormLabel>
+                          <div className="space-y-1">
+                            <Input
+                              id="exterior"
+                              type="number"
+                              min="1"
+                              max="10"
+                              value={field.value}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
+                                  field.onChange(value);
+                                  // Calculate overall condition
+                                  const interior = Number(form.getValues("condition.interior") || "10");
+                                  const overall = Math.round((interior + Number(value)) * 5);
+                                  form.setValue("condition.overall", overall.toString());
+                                }
+                              }}
+                              placeholder="Enter value from 1-10"
+                            />
+                            <p className="text-xs text-gray-500">Enter a value between 1 and 10</p>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
 
-                  <FormField
-                    control={form.control}
-                    name="condition.description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} />
-                        </FormControl>
+                    <FormField
+                      control={form.control}
+                      name="condition.overall"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Overall Condition*</FormLabel>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              id="overall"
+                              value={`${field.value}%`}
+                              readOnly
+                              className="bg-gray-50"
+                            />
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Info className="h-4 w-4 text-gray-400" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Overall condition is calculated as the average of interior and exterior conditions</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="condition.description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                            <FormControl>
+                            <Textarea {...field} />
+                            </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1099,6 +1080,108 @@ export default function AddNewItemPage() {
                             </Badge>
                           ))}
                         </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h2 className="text-xl font-semibold">Product Images</h2>
+                    <div className="space-y-4">
+                      <DragDropContext onDragEnd={handleDragEnd}>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {/* Pending Images */}
+                          <Droppable droppableId="pending" direction="horizontal">
+                            {(provided: DroppableProvided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.droppableProps}
+                                className="contents"
+                              >
+                                {previewUrls.map((url, index) => (
+                                  <Draggable
+                                    key={`pending-${index}`}
+                                    draggableId={`pending-${index}`}
+                                    index={index}
+                                  >
+                                    {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        {...provided.dragHandleProps}
+                                        className={`relative group ${
+                                          snapshot.isDragging ? 'z-50 shadow-lg' : ''
+                                        }`}
+                                        style={{
+                                          ...provided.draggableProps.style,
+                                          transform: snapshot.isDragging
+                                            ? provided.draggableProps.style?.transform
+                                            : 'none',
+                                        }}
+                                      >
+                                        <div className="aspect-square relative rounded-lg overflow-hidden border">
+                                          <Image
+                                            src={url}
+                                            alt={`Pending image ${index + 1}`}
+                                            fill
+                                            className="object-cover"
+                                          />
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => removePendingImage(index)}
+                                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </button>
+                                        <div className="absolute bottom-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
+                                          Pending
+                                        </div>
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                ))}
+                                {provided.placeholder}
+                              </div>
+                            )}
+                          </Droppable>
+
+                          {/* Upload Button */}
+                          <label className="aspect-square relative rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors cursor-pointer flex items-center justify-center">
+                            <div className="text-center">
+                              <Upload className="h-8 w-8 mx-auto text-gray-400" />
+                              <span className="mt-2 block text-sm text-gray-500">
+                                Upload Image
+                              </span>
+                              <span className="mt-1 block text-xs text-gray-400">
+                                Max 5MB per image
+                              </span>
+                            </div>
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept={ALLOWED_FILE_TYPES.join(',')}
+                              multiple
+                              onChange={handleImageUpload}
+                              disabled={uploadingImages}
+                            />
+                          </label>
+                        </div>
+                      </DragDropContext>
+
+                      {/* Status Messages */}
+                      {uploadingImages && (
+                        <div className="text-sm text-gray-500">
+                          Uploading images...
+                        </div>
+                      )}
+                      {pendingImages.length > 0 && (
+                        <div className="text-sm text-blue-500">
+                          {pendingImages.length} image(s) ready to upload
+                        </div>
+                      )}
+                      <div className="text-xs text-gray-500 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        Drag and drop to reorder images
                       </div>
                     </div>
                   </div>

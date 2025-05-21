@@ -125,6 +125,9 @@ export default function EditProductPage() {
   const { id } = params;
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [costDisplay, setCostDisplay] = useState("");
+  const [priceDisplay, setPriceDisplay] = useState("");
+  const [consignorPriceDisplay, setConsignorPriceDisplay] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<FormData>({
@@ -163,7 +166,52 @@ export default function EditProductPage() {
   const [categories, setCategories] = useState<{ external_id: string; name: string }[]>([]);
   const [brands, setBrands] = useState<{ external_id: string; name: string }[]>([]);
   const [authenticators, setAuthenticators] = useState<{ external_id: string; name: string }[]>([]);
+  const [consignors, setConsignors] = useState<{ external_id: string; first_name: string; last_name: string }[]>([]);
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
+
+  // Add currency formatting utilities
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "decimal",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  const parseCurrencyInput = (value: string) => {
+    const numericValue = value.replace(/[^0-9.]/g, "");
+    return parseFloat(numericValue) || 0;
+  };
+
+  const handleCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = parseCurrencyInput(e.target.value);
+    const formatted = raw ? formatCurrency(raw) : "";
+    setCostDisplay(formatted);
+    setFormData(prev => ({
+      ...prev,
+      cost: raw
+    }));
+  };
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = parseCurrencyInput(e.target.value);
+    const formatted = raw ? formatCurrency(raw) : "";
+    setPriceDisplay(formatted);
+    setFormData(prev => ({
+      ...prev,
+      price: raw
+    }));
+  };
+
+  const handleConsignorPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = parseCurrencyInput(e.target.value);
+    const formatted = raw ? formatCurrency(raw) : "";
+    setConsignorPriceDisplay(formatted);
+    setFormData(prev => ({
+      ...prev,
+      consignor_selling_price: raw
+    }));
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -174,6 +222,12 @@ export default function EditProductPage() {
         if (response.data.status.success) {
           const productData = response.data.data;
           setProduct(productData);
+          // Set initial display values for cost and price
+          setCostDisplay(formatCurrency(Number(productData.cost)));
+          setPriceDisplay(formatCurrency(Number(productData.price)));
+          if (productData.consignor_selling_price) {
+            setConsignorPriceDisplay(formatCurrency(Number(productData.consignor_selling_price)));
+          }
           setFormData({
             category_ext_id: productData.category.code,
             brand_ext_id: productData.brand.code,
@@ -186,11 +240,11 @@ export default function EditProductPage() {
             model: productData.model,
             inclusion: productData.inclusions || [],
             images: productData.images || [],
-            condition: productData.condition || {
-              interior: "",
-              exterior: "",
-              overall: "",
-              description: "",
+            condition: {
+              interior: productData.condition?.interior || "10",
+              exterior: productData.condition?.exterior || "10",
+              overall: productData.condition?.overall || "100",
+              description: productData.condition?.description || ""
             },
             cost: Number(productData.cost),
             price: Number(productData.price),
@@ -214,6 +268,12 @@ export default function EditProductPage() {
             authenticator: {
               code: productData.authenticator.code,
               name: productData.authenticator.name
+            },
+            condition: {
+              interior: productData.condition?.interior,
+              exterior: productData.condition?.exterior,
+              overall: productData.condition?.overall,
+              description: productData.condition?.description
             }
           });
         } else {
@@ -234,16 +294,18 @@ export default function EditProductPage() {
     async function fetchDropdowns() {
       setLoadingDropdowns(true);
       try {
-        const [cat, br, auth] = await Promise.all([
+        const [cat, br, auth, cons] = await Promise.all([
           axios.get('https://lwphsims-uat.up.railway.app/products/categories'),
           axios.get('https://lwphsims-uat.up.railway.app/products/brands'),
           axios.get('https://lwphsims-uat.up.railway.app/products/authenticators'),
+          axios.get('https://lwphsims-uat.up.railway.app/clients?isConsignor=Y')
         ]);
         setCategories(cat.data.data || []);
         setBrands(br.data.data || []);
         setAuthenticators(auth.data.data || []);
+        setConsignors(cons.data.data || []);
       } catch (e) {
-        // Optionally handle error
+        console.error("Error fetching dropdowns:", e);
       } finally {
         setLoadingDropdowns(false);
       }
@@ -264,23 +326,64 @@ export default function EditProductPage() {
         return;
       }
 
-      // Prepare the request data
+      // First, upload any pending images to Cloudinary
+      let newImageUrls: string[] = [];
+      if (pendingImages.length > 0) {
+        try {
+          setUploadingImages(true);
+          newImageUrls = await uploadImagesToCloudinary(pendingImages);
+          setUploadingImages(false);
+        } catch (error) {
+          console.error("Error uploading images:", error);
+          toast.error("Failed to upload images. Please try again.");
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      // Prepare the request data according to API format
       const requestData = {
-        ...formData,
+        // Basic Information
+        name: formData.name,
+        code: formData.code,
+        material: formData.material,
+        hardware: formData.hardware,
+        measurement: formData.measurement,
+        model: formData.model,
+
+        // Category, Brand, and Authenticator IDs
+        category_ext_id: formData.category_ext_id,
+        brand_ext_id: formData.brand_ext_id,
+        auth_ext_id: formData.auth_ext_id,
+
+        // Inclusions and Images
+        inclusion: formData.inclusion,
+        images: [...formData.images, ...newImageUrls], // Include both existing and new image URLs
+
+        // Condition
+        condition: {
+          interior: "10",
+          exterior: "10",
+          overall: "100",
+          description: formData.condition.description || ""
+        },
+
+        // Pricing
         cost: Number(formData.cost),
         price: Number(formData.price),
-        consignor_selling_price: formData.consignor_selling_price ? Number(formData.consignor_selling_price) : undefined,
-        condition: formData.condition || {
-          interior: "",
-          exterior: "",
-          overall: "",
-          description: ""
-        }
+
+        // Consignment Information
+        is_consigned: formData.is_consigned,
+        consignor_ext_id: formData.is_consigned ? formData.consignor_ext_id : undefined,
+        consignor_selling_price: formData.is_consigned ? Number(formData.consignor_selling_price) : undefined,
+        consigned_date: formData.is_consigned ? formData.consigned_date : undefined,
+
+        // System Fields
+        updated_by: "admin_user" // This should be replaced with actual logged-in user's ID
       };
 
-      console.log('Submitting data:', requestData); // Debug log
+      console.log('Submitting data:', requestData);
 
-      // First, submit the form data without new images to the API
       try {
         const response = await axios.put(
           `https://lwphsims-uat.up.railway.app/products/id/${id}`,
@@ -288,62 +391,23 @@ export default function EditProductPage() {
           {
             headers: {
               'Content-Type': 'application/json',
-            },
-            validateStatus: function (status) {
-              return status < 500; // Resolve only if the status code is less than 500
             }
           }
         );
 
         if (response.status === 200 && response.data.status.success) {
-          // Only proceed with image upload if API submission was successful
-          if (pendingImages.length > 0) {
-            try {
-              const newImageUrls = await uploadImagesToCloudinary(pendingImages);
-              
-              // Update the product with new image URLs
-              const updateResponse = await axios.put(
-                `https://lwphsims-uat.up.railway.app/products/id/${id}`,
-                {
-                  ...requestData,
-                  images: [...formData.images, ...newImageUrls]
-                },
-                {
-                  headers: {
-                    'Content-Type': 'application/json',
-                  }
-                }
-              );
-
-              if (updateResponse.status === 200 && updateResponse.data.status.success) {
-                toast.success("Product and images updated successfully");
-                setPendingImages([]);
-                router.push(`/inventory/${id}`);
-              } else {
-                console.error('Update response error:', updateResponse.data);
-                toast.error(updateResponse.data.status.message || "Failed to update product with new images");
-              }
-            } catch (error) {
-              console.error("Error uploading images:", error);
-              if (axios.isAxiosError(error)) {
-                toast.error(error.response?.data?.message || "Failed to upload images");
-              } else {
-                toast.error("Failed to upload images");
-              }
-            }
-          } else {
-            // If no new images, just show success message and redirect
-            toast.success("Product updated successfully");
-            router.push(`/inventory/${id}`);
-          }
+          toast.success("Product updated successfully");
+          setPendingImages([]);
+          router.push(`/inventory/${id}`);
         } else {
           console.error('API response error:', response.data);
-          toast.error(response.data.status.message || "Failed to update product");
+          const errorMessage = response.data.status?.message || response.data.message || "Failed to update product";
+          toast.error(errorMessage);
         }
       } catch (error) {
         console.error("API request error:", error);
         if (axios.isAxiosError(error)) {
-          const errorMessage = error.response?.data?.message || error.message;
+          const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message;
           toast.error(`API Error: ${errorMessage}`);
         } else {
           toast.error("An error occurred while updating the product");
@@ -366,13 +430,25 @@ export default function EditProductPage() {
   };
 
   const handleConditionChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      condition: {
+    setFormData(prev => {
+      const newCondition = {
         ...prev.condition,
         [field]: value
+      };
+
+      // Calculate overall condition as percentage
+      if (field === 'interior' || field === 'exterior') {
+        const interior = Number(field === 'interior' ? value : prev.condition.interior);
+        const exterior = Number(field === 'exterior' ? value : prev.condition.exterior);
+        const overall = Math.round((interior + exterior) * 5); // Multiply by 5 to get percentage (since each is out of 10)
+        newCondition.overall = overall.toString();
       }
-    }));
+
+      return {
+        ...prev,
+        condition: newCondition
+      };
+    });
   };
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -474,7 +550,6 @@ export default function EditProductPage() {
 
   const uploadImagesToCloudinary = async (files: File[]): Promise<string[]> => {
     try {
-      setUploadingImages(true);
       const uploadPromises = files.map(async (file) => {
         const formData = new FormData();
         formData.append('file', file);
@@ -485,6 +560,10 @@ export default function EditProductPage() {
           formData
         );
 
+        if (!response.data.secure_url) {
+          throw new Error('No secure URL returned from Cloudinary');
+        }
+
         return response.data.secure_url;
       });
 
@@ -493,8 +572,6 @@ export default function EditProductPage() {
     } catch (error) {
       console.error('Error uploading images:', error);
       throw new Error('Failed to upload images');
-    } finally {
-      setUploadingImages(false);
     }
   };
 
@@ -830,9 +907,9 @@ export default function EditProductPage() {
                 <Input
                   id="cost"
                   name="cost"
-                  type="number"
-                  value={formData.cost}
-                  onChange={handleNumberChange}
+                  value={costDisplay}
+                  onChange={handleCostChange}
+                  placeholder="0.00"
                   required
                 />
               </div>
@@ -841,9 +918,9 @@ export default function EditProductPage() {
                 <Input
                   id="price"
                   name="price"
-                  type="number"
-                  value={formData.price}
-                  onChange={handleNumberChange}
+                  value={priceDisplay}
+                  onChange={handlePriceChange}
+                  placeholder="0.00"
                   required
                 />
               </div>
@@ -856,56 +933,66 @@ export default function EditProductPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="interior">Interior Condition</Label>
-                <Select
-                  value={formData.condition.interior}
-                  onValueChange={(value) => handleConditionChange('interior', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select interior condition" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="New">New</SelectItem>
-                    <SelectItem value="Good as new">Good as new</SelectItem>
-                    <SelectItem value="Good">Good</SelectItem>
-                    <SelectItem value="Old">Old</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="space-y-1">
+                  <Input
+                    id="interior"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={formData.condition.interior}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
+                        handleConditionChange('interior', value);
+                      }
+                    }}
+                    placeholder="Enter value from 1-10"
+                  />
+                  <p className="text-xs text-gray-500">Enter a value between 1 and 10</p>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="exterior">Exterior Condition</Label>
-                <Select
-                  value={formData.condition.exterior}
-                  onValueChange={(value) => handleConditionChange('exterior', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select exterior condition" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="New">New</SelectItem>
-                    <SelectItem value="Good as new">Good as new</SelectItem>
-                    <SelectItem value="Good">Good</SelectItem>
-                    <SelectItem value="Old">Old</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="space-y-1">
+                  <Input
+                    id="exterior"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={formData.condition.exterior}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
+                        handleConditionChange('exterior', value);
+                      }
+                    }}
+                    placeholder="Enter value from 1-10"
+                  />
+                  <p className="text-xs text-gray-500">Enter a value between 1 and 10</p>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="overall">Overall Condition</Label>
-                <Select
-                  value={formData.condition.overall}
-                  onValueChange={(value) => handleConditionChange('overall', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select overall condition" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="New">New</SelectItem>
-                    <SelectItem value="Good as new">Good as new</SelectItem>
-                    <SelectItem value="Good">Good</SelectItem>
-                    <SelectItem value="Old">Old</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="overall"
+                    value={`${formData.condition.overall}%`}
+                    readOnly
+                    className="bg-gray-50"
+                  />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-4 w-4 text-gray-400" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Overall condition is calculated as the average of interior and exterior conditions</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -937,13 +1024,31 @@ export default function EditProductPage() {
             {formData.is_consigned && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="consignor_ext_id">Consignor</Label>
+                  <Select
+                    value={formData.consignor_ext_id}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, consignor_ext_id: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={loadingDropdowns ? "Loading consignors..." : "Select consignor"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {consignors.map((consignor) => (
+                        <SelectItem key={consignor.external_id} value={consignor.external_id}>
+                          {consignor.first_name} {consignor.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="consignor_selling_price">Consignor Price</Label>
                   <Input
                     id="consignor_selling_price"
                     name="consignor_selling_price"
-                    type="number"
-                    value={formData.consignor_selling_price}
-                    onChange={handleNumberChange}
+                    value={consignorPriceDisplay}
+                    onChange={handleConsignorPriceChange}
+                    placeholder="0.00"
                     required
                   />
                 </div>
