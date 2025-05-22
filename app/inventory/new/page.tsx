@@ -82,7 +82,7 @@ const formSchema = z.object({
   code: z.string().optional(),
   measurement: z.string().optional(),
   model: z.string().optional(),
-  auth_ext_id: z.string().min(1, "Authenticator is required"),
+  auth_ext_id: z.string().optional(),
   inclusion: z.array(z.string()),
   images: z.array(z.string()),
   condition: z.object({
@@ -726,22 +726,22 @@ export default function AddNewItemPage() {
                       name="auth_ext_id"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Authenticator*</FormLabel>
+                          <FormLabel>Authenticator</FormLabel>
                           <div className="flex gap-2">
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select authenticator" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {authenticators.map((auth) => (
-                                <SelectItem key={auth.external_id} value={auth.external_id}>
-                                  {auth.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select authenticator" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {authenticators.map((auth) => (
+                                  <SelectItem key={auth.external_id} value={auth.external_id}>
+                                    {auth.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <Button
                               type="button"
                               variant="outline"
