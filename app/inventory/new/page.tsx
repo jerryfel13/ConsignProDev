@@ -529,9 +529,9 @@ export default function AddNewItemPage() {
 
   return (
     <>
-      <div className="flex flex-col p-6 space-y-6 max-w-4xl mx-auto">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <div className="flex flex-col p-4 md:p-6 space-y-6 max-w-4xl mx-auto w-full">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4 w-full md:w-auto">
             <Link href="/inventory" passHref>
               <Button variant="outline" size="icon">
                 <ArrowLeft className="h-4 w-4" />
@@ -540,12 +540,12 @@ export default function AddNewItemPage() {
             </Link>
             <h1 className="text-2xl font-bold">Add New Item</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" disabled>
+          <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+            <Button variant="outline" disabled className="w-full md:w-auto">
               <ScanLine className="mr-2 h-4 w-4" />
               Scan Barcode
             </Button>
-            <Button variant="outline" disabled>
+            <Button variant="outline" disabled className="w-full md:w-auto">
               <Upload className="mr-2 h-4 w-4" />
               Import Item
             </Button>
@@ -576,7 +576,7 @@ export default function AddNewItemPage() {
 
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <FormField
                       control={form.control}
                       name="category_ext_id"
@@ -1037,18 +1037,20 @@ export default function AddNewItemPage() {
                     
                     <div className="space-y-4">
                       <h3 className="text-sm font-medium">Inclusions</h3>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2 w-full">
                         <Input
                           placeholder="Type inclusion and press Enter"
                           value={newInclusion}
                           onChange={(e) => setNewInclusion(e.target.value)}
                           onKeyPress={handleKeyPress}
+                          className="w-full sm:w-auto"
                         />
                         <Button
                           type="button"
                           variant="outline"
                           size="icon"
                           onClick={() => handleAddInclusion(newInclusion)}
+                          className="w-full sm:w-auto"
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
@@ -1101,7 +1103,7 @@ export default function AddNewItemPage() {
                     <h2 className="text-xl font-semibold">Product Images</h2>
                     <div className="space-y-4">
                       <DragDropContext onDragEnd={handleDragEnd}>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                           {/* Pending Images */}
                           <Droppable droppableId="pending" direction="horizontal">
                             {(provided: DroppableProvided) => (
@@ -1199,16 +1201,25 @@ export default function AddNewItemPage() {
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-4">
-                  <Button type="submit" disabled={isSubmitting}>
-                      <Save className="mr-2 h-4 w-4" />
-                    {isSubmitting ? "Saving..." : "Save Product"}
-                    </Button>
-                  <Button type="submit" variant="outline" disabled={isSubmitting}>
+                  <div className="flex flex-col md:flex-row justify-end gap-y-2 md:gap-y-0 md:gap-x-3 pt-6 w-full mt-4">
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      disabled={isSubmitting}
+                      className="w-full md:w-auto order-1 md:order-none"
+                    >
                       Save & Add New Product
                     </Button>
-                    <Link href="/inventory" passHref>
-                      <Button variant="ghost">Cancel</Button>
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full md:w-auto order-2 md:order-none"
+                    >
+                      <Save className="mr-2 h-4 w-4" />
+                      {isSubmitting ? "Saving..." : "Save Product"}
+                    </Button>
+                    <Link href="/inventory" passHref className="w-full md:w-auto order-3 md:order-none">
+                      <Button variant="destructive" className="w-full md:w-auto">Cancel</Button>
                     </Link>
                   </div>
                 </form>
