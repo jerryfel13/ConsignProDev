@@ -532,7 +532,12 @@ export default function ItemDetailPage() {
                     <div>
                       <div className="font-semibold text-base mb-2">Authentication & Condition</div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
-                        <div><span className="text-gray-500">Authenticator:</span> <span className="font-medium">{product.authenticator.name}</span></div>
+                        <div>
+                          <span className="text-gray-500">Authenticator:</span>
+                          <span className="font-medium">
+                            {product.authenticator ? product.authenticator.name : <span className="text-gray-400">None</span>}
+                          </span>
+                        </div>
                         {product.condition && (
                           <>
                             <div><span className="text-gray-500">Interior:</span> <span className="font-medium">{product.condition.interior}</span></div>
