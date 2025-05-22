@@ -135,13 +135,16 @@ export default function ItemDetailPage() {
       setMovementError(null);
       try {
         const endpoint = `https://lwphsims-uat.up.railway.app/products/id/${product.stock_external_id}/transactions`;
-        const response = await axios.post(endpoint, {
+        const requestBody = {
           searchValue: movementSearch,
           pageNumber: movementPage,
-          displayPerPage: movementPerPage,
-          sortBy: movementSort,
-          orderBy: movementOrder,
-        });
+          displayPerPage: 10,
+          sortBy: movementSort || 'created_at',
+          orderBy: movementOrder || 'desc',
+        };
+        console.log('Requesting product movements:', requestBody);
+        const response = await axios.post(endpoint, requestBody);
+        console.log('API response:', response.data);
         if (response.data.status?.success) {
           setMovements(response.data.data || []);
           setMovementMeta(response.data.meta || null);
@@ -155,7 +158,7 @@ export default function ItemDetailPage() {
       }
     };
     fetchMovements();
-  }, [activeTab, product, movementSearch, movementSort, movementOrder, movementPage, movementPerPage]);
+  }, [activeTab, product, movementSearch, movementSort, movementOrder, movementPage]);
 
   const nextImage = () => {
     if (product?.images) {
@@ -648,23 +651,67 @@ export default function ItemDetailPage() {
               {/* Pagination */}
               {movementMeta && (
                 <div className="flex items-center justify-between mt-4 text-sm">
-                  <button
-                    className="text-gray-500 hover:text-blue-600 disabled:opacity-50"
-                    disabled={movementPage <= 1}
-                    onClick={() => setMovementPage(p => Math.max(1, p - 1))}
-                  >
-                    &larr; Previous
-                  </button>
-                  <span>
-                    Page {movementMeta.page} of {movementMeta.totalPages}
-                  </span>
-                  <button
-                    className="text-gray-500 hover:text-blue-600 disabled:opacity-50"
-                    disabled={movementPage >= movementMeta.totalPages}
-                    onClick={() => setMovementPage(p => Math.min(movementMeta.totalPages, p + 1))}
-                  >
-                    Next &rarr;
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={movementPage <= 1}
+                      onClick={() => setMovementPage(1)}
+                    >
+                      First
+                    </button>
+                    <button
+                      className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={movementPage <= 1}
+                      onClick={() => setMovementPage(p => Math.max(1, p - 1))}
+                    >
+                      Previous
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {Array.from({ length: Math.min(5, movementMeta.totalPages) }, (_, i) => {
+                      // Calculate page numbers to show
+                      let pageNum;
+                      if (movementMeta.totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (movementPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (movementPage >= movementMeta.totalPages - 2) {
+                        pageNum = movementMeta.totalPages - 4 + i;
+                      } else {
+                        pageNum = movementPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          className={`px-3 py-1 border rounded ${
+                            movementPage === pageNum
+                              ? 'bg-blue-50 border-blue-500 text-blue-600'
+                              : 'hover:bg-gray-50'
+                          }`}
+                          onClick={() => setMovementPage(pageNum)}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={movementPage >= movementMeta.totalPages}
+                      onClick={() => setMovementPage(p => Math.min(movementMeta.totalPages, p + 1))}
+                    >
+                      Next
+                    </button>
+                    <button
+                      className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={movementPage >= movementMeta.totalPages}
+                      onClick={() => setMovementPage(movementMeta.totalPages)}
+                    >
+                      Last
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

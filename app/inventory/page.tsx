@@ -32,6 +32,13 @@ import {
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const LOW_STOCK_THRESHOLD = 5;
 
@@ -91,12 +98,13 @@ export default function InventoryPage() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [filters, setFilters] = useState({
-    consigned: false,
-    layaway: false,
+    searchValue: "",
+    isConsigned: "Y",
+    category: "all",
+    brand: "all",
     outOfStock: false,
     lowStock: false,
   });
-  const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
@@ -105,9 +113,38 @@ export default function InventoryPage() {
     totalPages: 1,
     displayPage: 10,
   });
+  const [sortConfig, setSortConfig] = useState({
+    sortBy: "name",
+    orderBy: "asc"
+  });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [categories, setCategories] = useState<{ external_id: string; name: string }[]>([]);
+  const [brands, setBrands] = useState<{ external_id: string; name: string }[]>([]);
+
+  // Fetch categories and brands
+  useEffect(() => {
+    const fetchDropdowns = async () => {
+      try {
+        const [catResponse, brandResponse] = await Promise.all([
+          axios.get("https://lwphsims-uat.up.railway.app/products/categories"),
+          axios.get("https://lwphsims-uat.up.railway.app/products/brands")
+        ]);
+        
+        if (catResponse.data.status.success) {
+          setCategories(catResponse.data.data);
+        }
+        if (brandResponse.data.status.success) {
+          setBrands(brandResponse.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching dropdowns:", error);
+      }
+    };
+
+    fetchDropdowns();
+  }, []);
 
   // Fetch products
   useEffect(() => {
@@ -115,46 +152,60 @@ export default function InventoryPage() {
       try {
         setIsLoading(true);
         let params: any = {
-          searchValue: search,
-          isConsigned: filters.consigned ? "Y" : "N",
+          searchValue: filters.searchValue || undefined,
+          isConsigned: filters.isConsigned,
           pageNumber: pagination.page,
           displayPerPage: pagination.displayPage,
-          sortBy: "name",
-          orderBy: "asc",
-          isOutOfStock: filters.outOfStock ? "y" : "n",
-          isLowStock: filters.lowStock ? "y" : "n",
+          sortBy: sortConfig.sortBy,
+          orderBy: sortConfig.orderBy
         };
-        if (filters.lowStock) {
-          params.isLowStock = "y";
+
+        // Only add category and brand to params if they're not "all"
+        if (filters.category && filters.category !== "all") {
+          params.category_ext_id = filters.category;
         }
-        if (filters.outOfStock) {
-          params.isOutOfStock = "y";
+        if (filters.brand && filters.brand !== "all") {
+          params.brand_ext_id = filters.brand;
         }
+
+        // Remove undefined values
+        Object.keys(params).forEach(key => {
+          if (params[key] === undefined) {
+            delete params[key];
+          }
+        });
+
+        console.log('Request params:', params); // Debug log
+
         const response = await axios.get("https://lwphsims-uat.up.railway.app/products", { params });
         if (response.data.status.success) {
           setProducts(response.data.data);
           setPagination(response.data.meta);
 
           // Calculate counts from the fetched products
-          const outOfStock = response.data.data.filter(p => p.stock.qty_in_stock === 0).length;
+          const outOfStock = response.data.data.filter((p: Product) => p.stock.qty_in_stock === 0).length;
           const lowStock = response.data.data.filter(
-            p => p.stock.qty_in_stock > 0 && p.stock.qty_in_stock <= p.stock.min_qty
+            (p: Product) => p.stock.qty_in_stock > 0 && p.stock.qty_in_stock <= p.stock.min_qty
           ).length;
           setOutOfStockCount(outOfStock);
           setLowStockCount(lowStock);
         } else {
-          setError("Failed to fetch products");
+          setError(response.data.status.message || "Failed to fetch products");
         }
       } catch (error) {
-        setError("An error occurred while fetching products");
         console.error("Error fetching products:", error);
+        if (axios.isAxiosError(error)) {
+          setError(error.response?.data?.message || "An error occurred while fetching products");
+        } else {
+          setError("An unexpected error occurred");
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchProducts();
-  }, [search, filters, pagination.page]);
+  }, [filters, pagination.page, sortConfig]);
 
   // Filtering logic
   const filteredProducts = products;
@@ -266,6 +317,53 @@ export default function InventoryPage() {
 
         <Card className="mt-6">
           <CardContent className="pt-6">
+            {/* Search and Filters */}
+            <div className="mb-4 space-y-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search by name, material, hardware, code, measurement, model, price..."
+                    value={filters.searchValue}
+                    onChange={(e) => setFilters(f => ({ ...f, searchValue: e.target.value }))}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <Select
+                    value={filters.isConsigned}
+                    onValueChange={(value) => setFilters(f => ({ ...f, isConsigned: value }))}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Consignment Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Y">Consigned</SelectItem>
+                      <SelectItem value="N">Not Consigned</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                 
+                  <Select
+                    value={`${sortConfig.sortBy}-${sortConfig.orderBy}`}
+                    onValueChange={(value) => {
+                      const [sortBy, orderBy] = value.split('-');
+                      setSortConfig({ sortBy, orderBy });
+                    }}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Sort By" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+                      <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+                      <SelectItem value="price-asc">Price (Low to High)</SelectItem>
+                      <SelectItem value="price-desc">Price (High to Low)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
             <div className="overflow-x-auto">
               <table className="min-w-[900px] w-full border text-sm bg-white rounded shadow">
                 <thead className="bg-gray-50 sticky top-0 z-10">
@@ -338,7 +436,47 @@ export default function InventoryPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-sm text-gray-500">
+                Showing {((pagination.page - 1) * pagination.displayPage) + 1} to {Math.min(pagination.page * pagination.displayPage, pagination.totalNumber)} of {pagination.totalNumber} items
               </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPagination(p => ({ ...p, page: Math.max(1, p.page - 1) }))}
+                  disabled={pagination.page === 1}
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={pagination.page === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPagination(p => ({ ...p, page: pageNum }))}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPagination(p => ({ ...p, page: Math.min(p.totalPages, p.page + 1) }))}
+                  disabled={pagination.page === pagination.totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -147,19 +147,22 @@ const CLOUDINARY_CLOUD_NAME = "dsaiym2rw"; // <-- replace with your actual cloud
 
 export default function AddNewItemPage() {
   const [itemType, setItemType] = useState("product");
+  const [categories, setCategories] = useState<{ external_id: string; name: string }[]>([]);
+  const [brands, setBrands] = useState<{ external_id: string; name: string }[]>([]);
+  const [authenticators, setAuthenticators] = useState<{ external_id: string; name: string }[]>([]);
+  const [consignors, setConsignors] = useState<{ external_id: string; first_name: string; last_name: string }[]>([]);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [isAuthenticatorModalOpen, setIsAuthenticatorModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [newInclusion, setNewInclusion] = useState("");
   const [inclusions, setInclusions] = useState<string[]>([]);
   const [costDisplay, setCostDisplay] = useState("");
   const [priceDisplay, setPriceDisplay] = useState("");
+  const [consignorPriceDisplay, setConsignorPriceDisplay] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [brands, setBrands] = useState<Array<{ external_id: string; name: string }>>([]);
-  const [categories, setCategories] = useState<Array<{ external_id: string; name: string }>>([]);
-  const [authenticators, setAuthenticators] = useState<Array<{ external_id: string; name: string }>>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [pendingImages, setPendingImages] = useState<File[]>([]);
   const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([]);
@@ -291,20 +294,27 @@ export default function AddNewItemPage() {
     fetchBrands();
   }, []);
 
-  // Fetch authenticators on component mount
+  // Fetch authenticators and consignors on component mount
   useEffect(() => {
-    const fetchAuthenticators = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get("https://lwphsims-uat.up.railway.app/products/authenticators");
-        if (response.data.status.success) {
-          setAuthenticators(response.data.data);
+        const [authResponse, consignorsResponse] = await Promise.all([
+          axios.get("https://lwphsims-uat.up.railway.app/products/authenticators"),
+          axios.get("https://lwphsims-uat.up.railway.app/clients?isConsignor=Y")
+        ]);
+        
+        if (authResponse.data.status.success) {
+          setAuthenticators(authResponse.data.data);
+        }
+        if (consignorsResponse.data.status.success) {
+          setConsignors(consignorsResponse.data.data);
         }
       } catch (error) {
-        console.error("Error fetching authenticators:", error);
+        console.error("Error fetching data:", error);
       }
     };
 
-    fetchAuthenticators();
+    fetchData();
   }, []);
 
   const form = useForm<FormData>({
@@ -728,20 +738,20 @@ export default function AddNewItemPage() {
                         <FormItem>
                           <FormLabel>Authenticator</FormLabel>
                           <div className="flex gap-2">
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select authenticator" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {authenticators.map((auth) => (
-                                  <SelectItem key={auth.external_id} value={auth.external_id}>
-                                    {auth.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select authenticator" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {authenticators.map((auth) => (
+                                <SelectItem key={auth.external_id} value={auth.external_id}>
+                                  {auth.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                             <Button
                               type="button"
                               variant="outline"
@@ -932,8 +942,11 @@ export default function AddNewItemPage() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="client1">Client 1</SelectItem>
-                                  <SelectItem value="client2">Client 2</SelectItem>
+                                  {consignors.map((consignor) => (
+                                    <SelectItem key={consignor.external_id} value={consignor.external_id}>
+                                      {consignor.first_name} {consignor.last_name}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -949,9 +962,14 @@ export default function AddNewItemPage() {
                               <FormLabel>Consignor Selling Price</FormLabel>
                               <FormControl>
                                 <Input 
-                                  type="number" 
-                                  {...field} 
-                                  onChange={e => field.onChange(e.target.valueAsNumber)}
+                                  value={consignorPriceDisplay}
+                                  onChange={e => {
+                                    const raw = parseCurrencyInput(e.target.value);
+                                    field.onChange(raw);
+                                    setConsignorPriceDisplay(e.target.value === "" ? "" : raw ? formatCurrency(raw) : "");
+                                  }}
+                                  placeholder="0.00"
+                                  inputMode="decimal"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -967,25 +985,25 @@ export default function AddNewItemPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Minimum Quantity*</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
+                              <FormControl>
+                                <Input 
+                                  type="number" 
                             min={0}
                             step="1"
-                            {...field}
+                                  {...field} 
                             onChange={(e) => {
                               const value = e.target.value === '' ? 0 : parseInt(e.target.value);
                               field.onChange(value);
                             }}
-                          />
-                        </FormControl>
+                                />
+                              </FormControl>
                         <FormDescription>
                           The minimum quantity that should be maintained in stock
                         </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
                   <FormField
                     control={form.control}
