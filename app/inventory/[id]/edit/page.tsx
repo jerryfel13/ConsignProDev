@@ -119,6 +119,10 @@ type FormData = {
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
+// Inline Cloudinary credentials
+const CLOUDINARY_UPLOAD_PRESET = "lwphsims";
+const CLOUDINARY_CLOUD_NAME = "dsaiym2rw";
+
 export default function EditProductPage() {
   const params = useParams() as { id: string };
   const router = useRouter();
@@ -430,25 +434,13 @@ export default function EditProductPage() {
   };
 
   const handleConditionChange = (field: string, value: string) => {
-    setFormData(prev => {
-      const newCondition = {
+    setFormData(prev => ({
+      ...prev,
+      condition: {
         ...prev.condition,
         [field]: value
-      };
-
-      // Calculate overall condition as percentage
-      if (field === 'interior' || field === 'exterior') {
-        const interior = Number(field === 'interior' ? value : prev.condition.interior);
-        const exterior = Number(field === 'exterior' ? value : prev.condition.exterior);
-        const overall = Math.round((interior + exterior) * 5); // Multiply by 5 to get percentage (since each is out of 10)
-        newCondition.overall = overall.toString();
       }
-
-      return {
-        ...prev,
-        condition: newCondition
-      };
-    });
+    }));
   };
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -553,10 +545,10 @@ export default function EditProductPage() {
       const uploadPromises = files.map(async (file) => {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || '');
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
         const response = await axios.post(
-          `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+          `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
           formData
         );
 
@@ -978,20 +970,25 @@ export default function EditProductPage() {
                 <div className="flex items-center gap-2">
                   <Input
                     id="overall"
-                    value={`${formData.condition.overall}%`}
-                    readOnly
-                    className="bg-gray-50"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.condition.overall}
+                    onChange={e => {
+                      const value = e.target.value;
+                      if (value === '' || (Number(value) >= 0 && Number(value) <= 100)) {
+                        setFormData(prev => ({
+                          ...prev,
+                          condition: {
+                            ...prev.condition,
+                            overall: value
+                          }
+                        }));
+                      }
+                    }}
+                    placeholder="Enter overall condition"
                   />
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="h-4 w-4 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Overall condition is calculated as the average of interior and exterior conditions</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <span className="text-gray-500 font-medium">%</span>
                 </div>
               </div>
 

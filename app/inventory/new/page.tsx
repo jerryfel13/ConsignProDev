@@ -141,6 +141,10 @@ const parseCurrencyInput = (value: string) => {
   return parseFloat(numericValue) || 0;
 };
 
+// Inline Cloudinary credentials
+const CLOUDINARY_UPLOAD_PRESET = "lwphsims"; // <-- replace with your actual preset
+const CLOUDINARY_CLOUD_NAME = "dsaiym2rw"; // <-- replace with your actual cloud name
+
 export default function AddNewItemPage() {
   const [itemType, setItemType] = useState("product");
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -226,10 +230,10 @@ export default function AddNewItemPage() {
       const uploadPromises = files.map(async (file) => {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || '');
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
         const response = await axios.post(
-          `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+          `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
           formData
         );
 
@@ -324,7 +328,7 @@ export default function AddNewItemPage() {
         description: "",
       },
       stock: {
-        min_qty: 1,
+        min_qty: 0,
         qty_in_stock: 0,
       },
       cost: 0,
@@ -769,10 +773,6 @@ export default function AddNewItemPage() {
                                 const value = e.target.value;
                                 if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
                                   field.onChange(value);
-                                  // Calculate overall condition
-                                  const exterior = Number(form.getValues("condition.exterior") || "10");
-                                  const overall = Math.round((Number(value) + exterior) * 5);
-                                  form.setValue("condition.overall", overall.toString());
                                 }
                               }}
                               placeholder="Enter value from 1-10"
@@ -801,10 +801,6 @@ export default function AddNewItemPage() {
                                 const value = e.target.value;
                                 if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
                                   field.onChange(value);
-                                  // Calculate overall condition
-                                  const interior = Number(form.getValues("condition.interior") || "10");
-                                  const overall = Math.round((interior + Number(value)) * 5);
-                                  form.setValue("condition.overall", overall.toString());
                                 }
                               }}
                               placeholder="Enter value from 1-10"
@@ -825,20 +821,19 @@ export default function AddNewItemPage() {
                           <div className="flex items-center gap-2">
                             <Input
                               id="overall"
-                              value={`${field.value}%`}
-                              readOnly
-                              className="bg-gray-50"
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={field.value}
+                              onChange={e => {
+                                const value = e.target.value;
+                                if (value === '' || (Number(value) >= 0 && Number(value) <= 100)) {
+                                  field.onChange(value);
+                                }
+                              }}
+                              placeholder="Enter overall condition"
                             />
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <Info className="h-4 w-4 text-gray-400" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Overall condition is calculated as the average of interior and exterior conditions</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <span className="text-gray-500 font-medium">%</span>
                           </div>
                           <FormMessage />
                         </FormItem>

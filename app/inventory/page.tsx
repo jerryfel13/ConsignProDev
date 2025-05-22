@@ -121,6 +121,8 @@ export default function InventoryPage() {
           displayPerPage: pagination.displayPage,
           sortBy: "name",
           orderBy: "asc",
+          isOutOfStock: filters.outOfStock ? "y" : "n",
+          isLowStock: filters.lowStock ? "y" : "n",
         };
         if (filters.lowStock) {
           params.isLowStock = "y";
@@ -132,6 +134,14 @@ export default function InventoryPage() {
         if (response.data.status.success) {
           setProducts(response.data.data);
           setPagination(response.data.meta);
+
+          // Calculate counts from the fetched products
+          const outOfStock = response.data.data.filter(p => p.stock.qty_in_stock === 0).length;
+          const lowStock = response.data.data.filter(
+            p => p.stock.qty_in_stock > 0 && p.stock.qty_in_stock <= p.stock.min_qty
+          ).length;
+          setOutOfStockCount(outOfStock);
+          setLowStockCount(lowStock);
         } else {
           setError("Failed to fetch products");
         }
@@ -148,48 +158,8 @@ export default function InventoryPage() {
 
   // Filtering logic
   const filteredProducts = products;
-
-  // Out of stock count
   const [outOfStockCount, setOutOfStockCount] = useState(0);
-  useEffect(() => {
-    const fetchOutOfStockCount = async () => {
-      if (filters.outOfStock) {
-        setOutOfStockCount(products.length);
-      } else {
-        try {
-          const response = await axios.get("https://lwphsims-uat.up.railway.app/products", { params: { isOutOfStock: "y" } });
-          if (response.data.status.success) {
-            setOutOfStockCount(response.data.data.length);
-          }
-        } catch {
-          setOutOfStockCount(0);
-        }
-      }
-    };
-    fetchOutOfStockCount();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.outOfStock, products]);
-
-  // For low stock count, fetch from API if not filtering, otherwise use products.length
   const [lowStockCount, setLowStockCount] = useState(0);
-  useEffect(() => {
-    const fetchLowStockCount = async () => {
-      if (filters.lowStock) {
-        setLowStockCount(products.length);
-      } else {
-        try {
-          const response = await axios.get("https://lwphsims-uat.up.railway.app/products", { params: { isLowStock: "y" } });
-          if (response.data.status.success) {
-            setLowStockCount(response.data.data.length);
-          }
-        } catch {
-          setLowStockCount(0);
-        }
-      }
-    };
-    fetchLowStockCount();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.lowStock, products]);
   const allItemsCount = products.length;
 
   const handleDeleteClick = (stock_external_id: string) => {
