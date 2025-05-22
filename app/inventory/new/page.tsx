@@ -71,7 +71,8 @@ import {
   DraggableStateSnapshot
 } from "@hello-pangea/dnd";
 import Image from "next/image";
-import { toast } from "sonner";
+import { toast } from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   category_ext_id: z.string().min(1, "Category is required"),
@@ -351,6 +352,8 @@ export default function AddNewItemPage() {
     },
   });
 
+  const router = useRouter();
+
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     try {
       setIsSubmitting(true);
@@ -364,7 +367,7 @@ export default function AddNewItemPage() {
           setUploadingImages(true);
           newImageUrls = await uploadImagesToCloudinary(pendingImages);
           setUploadingImages(false);
-    } catch (error) {
+        } catch (error) {
           console.error("Error uploading images:", error);
           toast.error("Failed to upload images. Please try again.");
           setIsSubmitting(false);
@@ -399,7 +402,10 @@ export default function AddNewItemPage() {
       );
 
       if (response.data.status.success) {
-        setSuccess("Product successfully created!");
+        toast.success("Product successfully created!", {
+          position: "top-right",
+          duration: 1800,
+        });
         // Reset form and displays
         form.reset();
         setCostDisplay("");
@@ -407,6 +413,9 @@ export default function AddNewItemPage() {
         setInclusions([]);
         setPendingImages([]);
         setPreviewUrls([]);
+        setTimeout(() => {
+          router.push("/inventory");
+        }, 1800);
       } else {
         setError(response.data.status.message || "Failed to create product");
       }
