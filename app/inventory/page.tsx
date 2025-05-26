@@ -262,17 +262,20 @@ export default function InventoryPage() {
 
   return (
     <>
-      <div className="flex flex-col p-6 space-y-6">
+      <div className="flex flex-col p-4 md:p-6 space-y-4 md:space-y-6 max-w-[1400px] mx-auto w-full">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Inventory</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Inventory</h1>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => router.push('/inventory/stock-analysis')}>
+            <Button variant="outline" onClick={() => router.push('/inventory/stock-analysis')} className="hidden md:flex">
               <LineChart className="mr-2 h-4 w-4" />
               Run Stock Analysis
             </Button>
+            <Button variant="outline" onClick={() => router.push('/inventory/stock-analysis')} className="md:hidden">
+              <LineChart className="h-4 w-4" />
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button>
+                <Button className="whitespace-nowrap">
                   Add New Item
                   <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
@@ -288,7 +291,7 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <Card
             onClick={() => setFilters(f => ({ ...f, outOfStock: !f.outOfStock, lowStock: false }))}
             className={`cursor-pointer transition-shadow ${filters.outOfStock ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
@@ -318,8 +321,8 @@ export default function InventoryPage() {
         <Card className="mt-6">
           <CardContent className="pt-6">
             {/* Search and Filters */}
-            <div className="mb-4 space-y-4">
-              <div className="flex flex-col md:flex-row gap-4">
+            <div className="mb-4 space-y-4 p-2">
+              <div className="flex flex-col lg:flex-row gap-4">
                 <div className="flex-1">
                   <Input
                     placeholder="Search by name, material, hardware, code, measurement, model, price..."
@@ -328,12 +331,12 @@ export default function InventoryPage() {
                     className="w-full"
                   />
                 </div>
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-4">
                   <Select
                     value={filters.isConsigned}
                     onValueChange={(value) => setFilters(f => ({ ...f, isConsigned: value }))}
                   >
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px]">
                       <SelectValue placeholder="Consignment Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -342,7 +345,6 @@ export default function InventoryPage() {
                     </SelectContent>
                   </Select>
 
-                 
                   <Select
                     value={`${sortConfig.sortBy}-${sortConfig.orderBy}`}
                     onValueChange={(value) => {
@@ -350,7 +352,7 @@ export default function InventoryPage() {
                       setSortConfig({ sortBy, orderBy });
                     }}
                   >
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px]">
                       <SelectValue placeholder="Sort By" />
                     </SelectTrigger>
                     <SelectContent>
@@ -364,17 +366,17 @@ export default function InventoryPage() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto -mx-2 sm:mx-0">
               <table className="min-w-[900px] w-full border text-sm bg-white rounded shadow">
                 <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
-                    <th className="p-3 text-left align-middle w-[220px] font-semibold text-gray-700 border-b">Name</th>
-                    <th className="p-3 text-left align-middle w-[120px] font-semibold text-gray-700 border-b">Category</th>
-                    <th className="p-3 text-left align-middle w-[120px] font-semibold text-gray-700 border-b">Brand</th>
-                    <th className="p-3 text-left align-middle w-[80px] font-semibold text-gray-700 border-b">Stock</th>
-                    <th className="p-3 text-left align-middle w-[110px] font-semibold text-gray-700 border-b">Price</th>
-                    <th className="p-3 text-left align-middle w-[110px] font-semibold text-gray-700 border-b">Consigned</th>
-                    <th className="p-3 text-left align-middle w-[160px] font-semibold text-gray-700 border-b">Actions</th>
+                    <th className="p-2 sm:p-3 text-left align-middle w-[220px] font-semibold text-gray-700 border-b">Name</th>
+                    <th className="p-2 sm:p-3 text-left align-middle w-[120px] font-semibold text-gray-700 border-b">Category</th>
+                    <th className="p-2 sm:p-3 text-left align-middle w-[120px] font-semibold text-gray-700 border-b">Brand</th>
+                    <th className="p-2 sm:p-3 text-left align-middle w-[80px] font-semibold text-gray-700 border-b">Stock</th>
+                    <th className="p-2 sm:p-3 text-left align-middle w-[110px] font-semibold text-gray-700 border-b">Price</th>
+                    <th className="p-2 sm:p-3 text-left align-middle w-[110px] font-semibold text-gray-700 border-b">Consigned</th>
+                    <th className="p-2 sm:p-3 text-left align-middle w-[160px] font-semibold text-gray-700 border-b">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -400,20 +402,20 @@ export default function InventoryPage() {
                             : "bg-gray-50 hover:bg-gray-100 border-b"
                         }
                       >
-                        <td className="p-3 text-left align-middle w-[220px] truncate max-w-[200px]">{product.name}</td>
-                        <td className="p-3 text-left align-middle w-[120px] truncate max-w-[100px]">{product.category.name}</td>
-                        <td className="p-3 text-left align-middle w-[120px] truncate max-w-[100px]">{product.brand.name}</td>
-                        <td className="p-3 text-left align-middle w-[80px]">{product.stock.qty_in_stock}</td>
-                        <td className="p-3 text-left align-middle w-[110px]">₱{Number(product.price).toLocaleString()}</td>
-                        <td className="p-3 text-left align-middle w-[110px]">{product.is_consigned ? "Yes" : "No"}</td>
-                        <td className="p-3 text-left align-middle w-[160px] flex items-center gap-2 justify-start">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 p-0">
+                        <td className="p-2 sm:p-3 text-left align-middle w-[220px] truncate max-w-[200px]">{product.name}</td>
+                        <td className="p-2 sm:p-3 text-left align-middle w-[120px] truncate max-w-[100px]">{product.category.name}</td>
+                        <td className="p-2 sm:p-3 text-left align-middle w-[120px] truncate max-w-[100px]">{product.brand.name}</td>
+                        <td className="p-2 sm:p-3 text-left align-middle w-[80px]">{product.stock.qty_in_stock}</td>
+                        <td className="p-2 sm:p-3 text-left align-middle w-[110px]">₱{Number(product.price).toLocaleString()}</td>
+                        <td className="p-2 sm:p-3 text-left align-middle w-[110px]">{product.is_consigned ? "Yes" : "No"}</td>
+                        <td className="p-2 sm:p-3 text-left align-middle w-[160px] flex items-center gap-2 justify-start">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
                                 <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => router.push(`/inventory/${product.stock_external_id}`)}>
                                 <Eye className="mr-2 h-4 w-4" /> View
                               </DropdownMenuItem>
@@ -428,8 +430,8 @@ export default function InventoryPage() {
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 {deletingId === product.stock_external_id ? "Deleting..." : "Delete"}
                               </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))
@@ -439,11 +441,11 @@ export default function InventoryPage() {
             </div>
 
             {/* Pagination */}
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-500">
+            <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-gray-500 text-center sm:text-left">
                 Showing {((pagination.page - 1) * pagination.displayPage) + 1} to {Math.min(pagination.page * pagination.displayPage, pagination.totalNumber)} of {pagination.totalNumber} items
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap justify-center">
                 <Button
                   variant="outline"
                   size="sm"
@@ -452,7 +454,7 @@ export default function InventoryPage() {
                 >
                   Previous
                 </Button>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-wrap justify-center">
                   {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
                     const pageNum = i + 1;
                     return (

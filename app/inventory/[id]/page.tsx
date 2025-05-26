@@ -629,15 +629,17 @@ export default function ItemDetailPage() {
                       <th className="px-4 py-2 text-left font-semibold">Qty before</th>
                       <th className="px-4 py-2 text-left font-semibold">Change</th>
                       <th className="px-4 py-2 text-left font-semibold">Qty after</th>
+                      <th className="px-4 py-2 text-left font-semibold">Status</th>
+                      <th className="px-4 py-2 text-left font-semibold">Performed By</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loadingMovements ? (
-                      <tr><td colSpan={6} className="text-center py-6">Loading...</td></tr>
+                      <tr><td colSpan={8} className="text-center py-6">Loading...</td></tr>
                     ) : movementError ? (
-                      <tr><td colSpan={6} className="text-center text-red-500 py-6">{movementError}</td></tr>
+                      <tr><td colSpan={8} className="text-center text-red-500 py-6">{movementError}</td></tr>
                     ) : movements.length === 0 ? (
-                      <tr><td colSpan={6} className="text-center text-gray-500 py-6">No product movement found.</td></tr>
+                      <tr><td colSpan={8} className="text-center text-gray-500 py-6">No product movement found.</td></tr>
                     ) : (
                       movements.map((m, idx) => (
                         <tr key={idx} className="hover:bg-gray-50">
@@ -647,6 +649,21 @@ export default function ItemDetailPage() {
                           <td className="px-4 py-2">{m.qty_before ?? '-'}</td>
                           <td className="px-4 py-2">{m.change ?? '-'}</td>
                           <td className="px-4 py-2">{m.qty_after ?? '-'}</td>
+                          <td className="px-4 py-2">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              m.status === 'none' || m.status === 'sold' ? 'bg-green-100 text-green-800' :
+                              m.status === 'reserved' ? 'bg-blue-100 text-blue-800' :
+                              m.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {m.status || 'N/A'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2">
+                            <div className="flex flex-col">
+                              <span className="text-sm">{m.performed_by || '-'}</span>
+                            </div>
+                          </td>
                         </tr>
                       ))
                     )}
