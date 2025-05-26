@@ -75,7 +75,7 @@ type Product = {
   price: string;
   stock: {
     min_qty: number;
-    qty_in_stock: number;
+    avail_qty: number;
     sold_stock: number;
   };
   is_consigned: boolean;
@@ -99,7 +99,7 @@ export default function InventoryPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [filters, setFilters] = useState({
     searchValue: "",
-    isConsigned: "Y",
+    isConsigned: "all",
     category: "all",
     brand: "all",
     outOfStock: false,
@@ -122,6 +122,13 @@ export default function InventoryPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [categories, setCategories] = useState<{ external_id: string; name: string }[]>([]);
   const [brands, setBrands] = useState<{ external_id: string; name: string }[]>([]);
+  const [newInclusion, setNewInclusion] = useState("");
+
+  // Add new state for stock status counts
+  const [stockStatusCounts, setStockStatusCounts] = useState({
+    outOfStock: 0,
+    lowStock: 0
+  });
 
   // Fetch categories and brands
   useEffect(() => {
@@ -146,21 +153,29 @@ export default function InventoryPage() {
     fetchDropdowns();
   }, []);
 
-  // Fetch products
+  // Fetch products with optimized params
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setIsLoading(true);
         let params: any = {
           searchValue: filters.searchValue || undefined,
-          isConsigned: filters.isConsigned,
           pageNumber: pagination.page,
           displayPerPage: pagination.displayPage,
           sortBy: sortConfig.sortBy,
           orderBy: sortConfig.orderBy
         };
 
-        // Only add category and brand to params if they're not "all"
+        // Add filters to params
+        if (filters.isConsigned !== "all") {
+          params.isConsigned = filters.isConsigned;
+        }
+        if (filters.outOfStock) {
+          params.isOutOfStock = 'y';
+        }
+        if (filters.lowStock) {
+          params.isLowStock = 'y';
+        }
         if (filters.category && filters.category !== "all") {
           params.category_ext_id = filters.category;
         }
@@ -175,20 +190,12 @@ export default function InventoryPage() {
           }
         });
 
-        console.log('Request params:', params); // Debug log
-
+        // Fetch products with current filters
         const response = await axios.get("https://lwphsims-uat.up.railway.app/products", { params });
+        
         if (response.data.status.success) {
           setProducts(response.data.data);
           setPagination(response.data.meta);
-
-          // Calculate counts from the fetched products
-          const outOfStock = response.data.data.filter((p: Product) => p.stock.qty_in_stock === 0).length;
-          const lowStock = response.data.data.filter(
-            (p: Product) => p.stock.qty_in_stock > 0 && p.stock.qty_in_stock <= p.stock.min_qty
-          ).length;
-          setOutOfStockCount(outOfStock);
-          setLowStockCount(lowStock);
         } else {
           setError(response.data.status.message || "Failed to fetch products");
         }
@@ -207,11 +214,42 @@ export default function InventoryPage() {
     fetchProducts();
   }, [filters, pagination.page, sortConfig]);
 
+  // Separate effect for fetching stock status counts
+  useEffect(() => {
+    const fetchStockStatusCounts = async () => {
+      try {
+        // Only fetch if the respective card is visible or hasn't been fetched yet
+        const [outOfStockResponse, lowStockResponse] = await Promise.all([
+          axios.get("https://lwphsims-uat.up.railway.app/products", { 
+            params: { 
+              isOutOfStock: 'y',
+              displayPerPage: 1 // We only need the count
+            } 
+          }),
+          axios.get("https://lwphsims-uat.up.railway.app/products", { 
+            params: { 
+              isLowStock: 'y',
+              displayPerPage: 1 // We only need the count
+            } 
+          })
+        ]);
+
+        if (outOfStockResponse.data.status.success && lowStockResponse.data.status.success) {
+          setStockStatusCounts({
+            outOfStock: outOfStockResponse.data.meta.totalNumber,
+            lowStock: lowStockResponse.data.meta.totalNumber
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching stock status counts:", error);
+      }
+    };
+
+    fetchStockStatusCounts();
+  }, []); // Only fetch once on component mount
+
   // Filtering logic
   const filteredProducts = products;
-  const [outOfStockCount, setOutOfStockCount] = useState(0);
-  const [lowStockCount, setLowStockCount] = useState(0);
-  const allItemsCount = products.length;
 
   const handleDeleteClick = (stock_external_id: string) => {
     setDeleteId(stock_external_id);
@@ -260,31 +298,52 @@ export default function InventoryPage() {
     }
   };
 
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleAddInclusion(newInclusion);
+    }
+  };
+
+  const handleAddInclusion = (inclusion: string) => {
+    // Implementation of handleAddInclusion
+  };
+
+  // Update the card click handlers
+  const handleOutOfStockClick = () => {
+    setFilters(f => ({ ...f, outOfStock: !f.outOfStock, lowStock: false }));
+  };
+
+  const handleLowStockClick = () => {
+    setFilters(f => ({ ...f, lowStock: !f.lowStock, outOfStock: false }));
+  };
+
   return (
     <>
       <div className="flex flex-col p-4 md:p-6 space-y-4 md:space-y-6 max-w-[1400px] mx-auto w-full">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <h1 className="text-xl md:text-2xl font-bold">Inventory</h1>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => router.push('/inventory/stock-analysis')} className="hidden md:flex">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+            <Button 
+              variant="outline" 
+              onClick={() => router.push('/inventory/stock-analysis')} 
+              className="w-full sm:w-auto justify-center"
+            >
               <LineChart className="mr-2 h-4 w-4" />
-              Run Stock Analysis
-            </Button>
-            <Button variant="outline" onClick={() => router.push('/inventory/stock-analysis')} className="md:hidden">
-              <LineChart className="h-4 w-4" />
+              <span className="hidden sm:inline">Run Stock Analysis</span>
+              <span className="sm:hidden">Analysis</span>
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="whitespace-nowrap">
+                <Button className="w-full sm:w-auto whitespace-nowrap">
                   Add New Item
                   <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-[200px]">
                 <DropdownMenuItem asChild>
-                   <Link href="/inventory/new" className="flex items-center">
-                     <Plus className="mr-2 h-4 w-4" /> Add item manually
-                   </Link>
+                  <Link href="/inventory/new" className="flex items-center">
+                    <Plus className="mr-2 h-4 w-4" /> Add item manually
+                  </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -301,7 +360,7 @@ export default function InventoryPage() {
               <Box className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{outOfStockCount}</div>
+              <div className="text-2xl font-bold">{stockStatusCounts.outOfStock}</div>
             </CardContent>
           </Card>
           <Card
@@ -313,14 +372,13 @@ export default function InventoryPage() {
               <TrendingDown className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{lowStockCount}</div>
+              <div className="text-2xl font-bold">{stockStatusCounts.lowStock}</div>
             </CardContent>
           </Card>
         </div>
 
         <Card className="mt-6">
           <CardContent className="pt-6">
-            {/* Search and Filters */}
             <div className="mb-4 space-y-4 p-2">
               <div className="flex flex-col lg:flex-row gap-4">
                 <div className="flex-1">
@@ -340,6 +398,7 @@ export default function InventoryPage() {
                       <SelectValue placeholder="Consignment Status" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="all">All Items</SelectItem>
                       <SelectItem value="Y">Consigned</SelectItem>
                       <SelectItem value="N">Not Consigned</SelectItem>
                     </SelectContent>
@@ -405,33 +464,35 @@ export default function InventoryPage() {
                         <td className="p-2 sm:p-3 text-left align-middle w-[220px] truncate max-w-[200px]">{product.name}</td>
                         <td className="p-2 sm:p-3 text-left align-middle w-[120px] truncate max-w-[100px]">{product.category.name}</td>
                         <td className="p-2 sm:p-3 text-left align-middle w-[120px] truncate max-w-[100px]">{product.brand.name}</td>
-                        <td className="p-2 sm:p-3 text-left align-middle w-[80px]">{product.stock.qty_in_stock}</td>
+                        <td className="p-2 sm:p-3 text-left align-middle w-[80px]">{product.stock.avail_qty}</td>
                         <td className="p-2 sm:p-3 text-left align-middle w-[110px]">₱{Number(product.price).toLocaleString()}</td>
                         <td className="p-2 sm:p-3 text-left align-middle w-[110px]">{product.is_consigned ? "Yes" : "No"}</td>
-                        <td className="p-2 sm:p-3 text-left align-middle w-[160px] flex items-center gap-2 justify-start">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => router.push(`/inventory/${product.stock_external_id}`)}>
-                                <Eye className="mr-2 h-4 w-4" /> View
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => router.push(`/inventory/${product.stock_external_id}/edit`)}>
-                                <Pencil className="mr-2 h-4 w-4" /> Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-red-600 focus:text-red-600"
-                                onClick={() => handleDeleteClick(product.stock_external_id)}
-                                disabled={deletingId === product.stock_external_id}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                {deletingId === product.stock_external_id ? "Deleting..." : "Delete"}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                        <td className="p-2 sm:p-3 text-left align-middle w-[160px]">
+                          <div className="flex items-center gap-2 justify-start">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-[200px]">
+                                <DropdownMenuItem onClick={() => router.push(`/inventory/${product.stock_external_id}`)}>
+                                  <Eye className="mr-2 h-4 w-4" /> View
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => router.push(`/inventory/${product.stock_external_id}/edit`)}>
+                                  <Pencil className="mr-2 h-4 w-4" /> Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-600"
+                                  onClick={() => handleDeleteClick(product.stock_external_id)}
+                                  disabled={deletingId === product.stock_external_id}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  {deletingId === product.stock_external_id ? "Deleting..." : "Delete"}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -440,7 +501,6 @@ export default function InventoryPage() {
               </table>
             </div>
 
-            {/* Pagination */}
             <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-sm text-gray-500 text-center sm:text-left">
                 Showing {((pagination.page - 1) * pagination.displayPage) + 1} to {Math.min(pagination.page * pagination.displayPage, pagination.totalNumber)} of {pagination.totalNumber} items
@@ -451,6 +511,7 @@ export default function InventoryPage() {
                   size="sm"
                   onClick={() => setPagination(p => ({ ...p, page: Math.max(1, p.page - 1) }))}
                   disabled={pagination.page === 1}
+                  className="min-w-[80px]"
                 >
                   Previous
                 </Button>
@@ -463,6 +524,7 @@ export default function InventoryPage() {
                         variant={pagination.page === pageNum ? "default" : "outline"}
                         size="sm"
                         onClick={() => setPagination(p => ({ ...p, page: pageNum }))}
+                        className="min-w-[40px]"
                       >
                         {pageNum}
                       </Button>
@@ -474,6 +536,7 @@ export default function InventoryPage() {
                   size="sm"
                   onClick={() => setPagination(p => ({ ...p, page: Math.min(p.totalPages, p.page + 1) }))}
                   disabled={pagination.page === pagination.totalPages}
+                  className="min-w-[80px]"
                 >
                   Next
                 </Button>
@@ -483,8 +546,8 @@ export default function InventoryPage() {
         </Card>
       </div>
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-sm flex flex-col items-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm flex flex-col items-center">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-3">
               <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>

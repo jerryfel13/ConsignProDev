@@ -303,25 +303,30 @@ export default function ItemDetailPage() {
           {activeTab === 'details' && (
             <>
               {/* Header: Back, Main Info, Actions */}
-              <div className="flex items-center mb-6">
-                <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <span className="ml-2 text-lg font-semibold">{product.name}</span>
-                <Badge variant="secondary" className="ml-2">{product.category.name}</Badge>
-                <span className="ml-2 text-gray-500">{product.brand.name}</span>
-                <span className="ml-2 bg-blue-100 text-blue-700 rounded-full px-3 py-1 text-sm font-medium">
-                  Qty: {product.stock.qty_in_stock}
-                </span>
-                <div className="ml-auto flex gap-2">
+              <div className="flex flex-col md:flex-row md:items-center mb-6 gap-4 md:gap-0">
+                <div className="flex items-center flex-wrap gap-2 flex-1 min-w-0">
+                  <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0">
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                  <span className="ml-2 text-lg font-semibold truncate max-w-[120px] md:max-w-xs">{product.name}</span>
+                  <Badge variant="secondary" className="ml-2 whitespace-nowrap">{product.category.name}</Badge>
+                  <span className="ml-2 text-gray-500 truncate max-w-[80px] md:max-w-[120px]">{product.brand.name}</span>
+                  <span className="ml-2 bg-blue-100 text-blue-700 rounded-full px-3 py-1 text-xs md:text-sm font-medium whitespace-nowrap">Qty: {product.stock.qty_in_stock}</span>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 mt-2 md:mt-0 w-full md:w-auto">
                   <Button 
                     variant="outline" 
                     size="sm"
                     onClick={() => router.push(`/inventory/${product.stock_external_id}/edit`)}
+                    className="w-full sm:w-auto"
                   >
                     <Edit className="mr-2 h-4 w-4" /> Edit Item
                   </Button>
-                  <Button size="sm" onClick={handleOpenStockModal}>
+                  <Button 
+                    size="sm" 
+                    onClick={handleOpenStockModal}
+                    className="w-full sm:w-auto"
+                  >
                     <Plus className="mr-2 h-4 w-4" /> Update stock
                   </Button>
                 </div>

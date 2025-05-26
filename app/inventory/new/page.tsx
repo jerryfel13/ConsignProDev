@@ -87,16 +87,10 @@ const formSchema = z.object({
   inclusion: z.array(z.string()),
   images: z.array(z.string()),
   condition: z.object({
-    interior: z.string().min(1, 
-      "Please enter interior condition",
-    ),
-    exterior: z.string().min(1, 
-      "Please enter exterior condition",
-    ),
-    overall: z.string().min(1, 
-      "Please enter overall condition",
-    ),
-    description: z.string().optional(),
+    interior: z.string().min(1, "Please enter interior condition"),
+    exterior: z.string().min(1, "Please enter exterior condition"),
+    overall: z.string().min(1, "Please enter overall condition"),
+    description: z.string().min(1, "Please enter a condition description"),
   }),
   stock: z.object({
     min_qty: z.coerce.number().min(0, "Minimum quantity must be a positive number"),
@@ -158,6 +152,10 @@ export default function AddNewItemPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showSuccessPrompt, setShowSuccessPrompt] = useState(false);
+  const [showErrorPrompt, setShowErrorPrompt] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const [newInclusion, setNewInclusion] = useState("");
   const [inclusions, setInclusions] = useState<string[]>([]);
   const [costDisplay, setCostDisplay] = useState("");
@@ -354,11 +352,44 @@ export default function AddNewItemPage() {
 
   const router = useRouter();
 
-  const onSubmit: SubmitHandler<FormData> = async (data) => {
+  const onSubmit: SubmitHandler<FormData> = async (data, event) => {
     try {
       setIsSubmitting(true);
       setError(null);
       setSuccess(null);
+      setShowErrorPrompt(false);
+
+      // Trigger form validation
+      const result = await form.trigger();
+      if (!result) {
+        // Get all form errors
+        const formErrors = form.formState.errors;
+        const missingFields: string[] = [];
+
+        // Check each required field
+        if (formErrors.category_ext_id) missingFields.push("Category");
+        if (formErrors.brand_ext_id) missingFields.push("Brand");
+        if (formErrors.name) missingFields.push("Name");
+        if (formErrors.cost) missingFields.push("Cost");
+        if (formErrors.price) missingFields.push("Price");
+        if (formErrors.stock?.min_qty) missingFields.push("Minimum Quantity");
+        if (formErrors.stock?.qty_in_stock) missingFields.push("Quantity in Stock");
+        if (formErrors.condition?.interior) missingFields.push("Interior Condition");
+        if (formErrors.condition?.exterior) missingFields.push("Exterior Condition");
+        if (formErrors.condition?.overall) missingFields.push("Overall Condition");
+        if (formErrors.condition?.description) missingFields.push("Condition Description");
+
+        // Create error message
+        const errorMessage = missingFields.length > 0
+          ? `Please fill in the following required fields: ${missingFields.join(", ")}`
+          : "Please check all required fields";
+
+        setErrorMessage(errorMessage);
+        setShowErrorPrompt(true);
+        setTimeout(() => setShowErrorPrompt(false), 5000);
+        setIsSubmitting(false);
+        return;
+      }
 
       // First, upload any pending images to Cloudinary
       let newImageUrls: string[] = [];
@@ -367,9 +398,11 @@ export default function AddNewItemPage() {
           setUploadingImages(true);
           newImageUrls = await uploadImagesToCloudinary(pendingImages);
           setUploadingImages(false);
-        } catch (error) {
+    } catch (error) {
           console.error("Error uploading images:", error);
-          toast.error("Failed to upload images. Please try again.");
+          setErrorMessage("Unable to upload images. Please check your internet connection and try again.");
+          setShowErrorPrompt(true);
+          setTimeout(() => setShowErrorPrompt(false), 5000);
           setIsSubmitting(false);
           return;
         }
@@ -393,7 +426,7 @@ export default function AddNewItemPage() {
           description: data.condition.description || ""
         },
         consigned_date: data.is_consigned ? new Date().toISOString().split('T')[0] : undefined,
-        created_by: "admin_user" // This should be replaced with actual logged-in user's ID
+        created_by: "admin_user"
       };
 
       const response = await axios.post(
@@ -402,38 +435,95 @@ export default function AddNewItemPage() {
       );
 
       if (response.data.status.success) {
-        toast.success("Product successfully created!", {
-          position: "top-right",
-          duration: 1800,
-        });
-        // Reset form and displays
-        form.reset();
-        setCostDisplay("");
-        setPriceDisplay("");
-        setInclusions([]);
-        setPendingImages([]);
-        setPreviewUrls([]);
+        setSuccessMessage("Product successfully created!");
+        setShowSuccessPrompt(true);
+
+        // Check which button was clicked
+        const submitter = (event?.nativeEvent as SubmitEvent)?.submitter as HTMLButtonElement;
+        const isSaveAndAddNew = submitter?.textContent?.includes("Save & Add New");
+
+        if (isSaveAndAddNew) {
+          // Reset form and displays but stay on the page
+          form.reset();
+          setCostDisplay("");
+          setPriceDisplay("");
+          setInclusions([]);
+          setPendingImages([]);
+          setPreviewUrls([]);
+        } else {
+          // Redirect to inventory page
+          setTimeout(() => {
+            router.push("/inventory");
+          }, 1800);
+        }
+
+        // Hide success prompt after 1.8 seconds
         setTimeout(() => {
-          router.push("/inventory");
+          setShowSuccessPrompt(false);
         }, 1800);
       } else {
-        setError(response.data.status.message || "Failed to create product");
+        const errorMsg = response.data.status.message || "Failed to create product";
+        setErrorMessage(formatErrorMessage(errorMsg));
+        setShowErrorPrompt(true);
+        setTimeout(() => setShowErrorPrompt(false), 5000); // Increased timeout for error messages
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.data?.message) {
-          setError(Array.isArray(error.response.data.message) 
+          const message = Array.isArray(error.response.data.message) 
             ? error.response.data.message.join(", ") 
-            : error.response.data.message);
+            : error.response.data.message;
+          setErrorMessage(formatErrorMessage(message));
         } else {
-          setError("An error occurred while creating the product");
+          setErrorMessage("Unable to create product. Please check your internet connection and try again.");
         }
       } else {
-        setError("An unexpected error occurred");
+        setErrorMessage("An unexpected error occurred. Please try again later.");
       }
+      setShowErrorPrompt(true);
+      setTimeout(() => setShowErrorPrompt(false), 5000); // Increased timeout for error messages
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Helper function to format error messages
+  const formatErrorMessage = (message: string): string => {
+    // Common error message mappings
+    const errorMappings: { [key: string]: string } = {
+      "category_ext_id is required": "Please select a category",
+      "brand_ext_id is required": "Please select a brand",
+      "name is required": "Please enter a product name",
+      "name must be at least 2 characters": "Product name must be at least 2 characters long",
+      "cost must be a positive number": "Please enter a valid cost amount",
+      "price must be a positive number": "Please enter a valid price amount",
+      "stock.min_qty must be a positive number": "Please enter a valid minimum quantity",
+      "stock.qty_in_stock must be a positive number": "Please enter a valid quantity in stock",
+      "condition.interior is required": "Please enter the interior condition",
+      "condition.exterior is required": "Please enter the exterior condition",
+      "condition.overall is required": "Please enter the overall condition",
+      "condition.description is required": "Please enter a condition description",
+      "created_by is required": "System error: User information missing",
+      "Invalid file type": "Please upload only JPG, PNG, or WebP images",
+      "File size exceeds limit": "Image size must be less than 5MB",
+      "Network Error": "Unable to connect to the server. Please check your internet connection.",
+      "timeout of 5000ms exceeded": "Request timed out. Please try again.",
+      "Request failed with status code 400": "Invalid data provided. Please check your inputs.",
+      "Request failed with status code 401": "Session expired. Please log in again.",
+      "Request failed with status code 403": "You don't have permission to perform this action.",
+      "Request failed with status code 404": "Resource not found. Please try again.",
+      "Request failed with status code 500": "Server error. Please try again later."
+    };
+
+    // Check if we have a mapping for this error
+    for (const [key, value] of Object.entries(errorMappings)) {
+      if (message.toLowerCase().includes(key.toLowerCase())) {
+        return value;
+      }
+    }
+
+    // If no mapping found, return a generic message
+    return "Unable to create product. Please check your inputs and try again.";
   };
 
   const handleCategoryAdded = async (category: { external_id: string; name: string }) => {
@@ -538,6 +628,38 @@ export default function AddNewItemPage() {
 
   return (
     <>
+      {showSuccessPrompt && (
+        <div className="fixed top-4 right-4 z-50">
+          <div className="bg-white rounded-lg shadow-lg p-4 border border-green-200 flex items-center gap-3">
+            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-medium text-green-800">Success</h4>
+              <p className="text-sm text-green-600">{successMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showErrorPrompt && (
+        <div className="fixed top-4 right-4 z-50">
+          <div className="bg-white rounded-lg shadow-lg p-4 border border-red-200 flex items-center gap-3">
+            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-medium text-red-800">Missing Required Fields</h4>
+              <p className="text-sm text-red-600">{errorMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col p-4 md:p-6 space-y-6 max-w-4xl mx-auto w-full">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4 w-full md:w-auto">
@@ -567,7 +689,7 @@ export default function AddNewItemPage() {
               <div>
                 <h3 className="text-lg font-semibold">Product details</h3>
                 <p className="text-sm text-muted-foreground">
-                  Add your product to make cost management easier (* for required fields)
+                Add your product to make cost management easier <span className="text-red-500">*</span> for required fields
                 </p>
               </div>
 
@@ -585,26 +707,33 @@ export default function AddNewItemPage() {
 
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <FormField
                       control={form.control}
                       name="category_ext_id"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Category*</FormLabel>
+                        <FormLabel className="flex items-center gap-1">
+                          Category
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
                           <div className="flex gap-2">
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                            value={field.value}
+                          >
                               <FormControl>
-                                <SelectTrigger>
+                              <SelectTrigger className={form.formState.errors.category_ext_id ? "border-red-500" : ""}>
                                   <SelectValue placeholder="Select category" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {categories.map((category) => (
-                                  <SelectItem key={category.external_id} value={category.external_id}>
-                                    {category.name}
-                                  </SelectItem>
-                                ))}
+                              {categories.map((category) => (
+                                <SelectItem key={category.external_id} value={category.external_id}>
+                                  {category.name}
+                                </SelectItem>
+                              ))}
                               </SelectContent>
                             </Select>
                             <Button
@@ -626,11 +755,18 @@ export default function AddNewItemPage() {
                       name="brand_ext_id"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Brand*</FormLabel>
+                        <FormLabel className="flex items-center gap-1">
+                          Brand
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
                         <div className="flex gap-2">
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                            value={field.value}
+                          >
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger className={form.formState.errors.brand_ext_id ? "border-red-500" : ""}>
                                 <SelectValue placeholder="Select brand" />
                               </SelectTrigger>
                             </FormControl>
@@ -661,9 +797,15 @@ export default function AddNewItemPage() {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Name*</FormLabel>
+                        <FormLabel className="flex items-center gap-1">
+                          Name
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                          <Input 
+                            {...field} 
+                            className={form.formState.errors.name ? "border-red-500" : ""}
+                          />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -745,8 +887,8 @@ export default function AddNewItemPage() {
                       name="auth_ext_id"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Authenticator</FormLabel>
-                          <div className="flex gap-2">
+                        <FormLabel>Authenticator</FormLabel>
+                        <div className="flex gap-2">
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
@@ -761,15 +903,15 @@ export default function AddNewItemPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={() => setIsAuthenticatorModalOpen(true)}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setIsAuthenticatorModalOpen(true)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -777,96 +919,115 @@ export default function AddNewItemPage() {
 
                     <FormField
                       control={form.control}
-                      name="condition.interior"
+                    name="condition.interior"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Interior Condition*</FormLabel>
-                          <div className="space-y-1">
-                            <Input
-                              id="interior"
-                              type="number"
-                              min="1"
-                              max="10"
-                              value={field.value}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
-                                  field.onChange(value);
-                                }
-                              }}
-                              placeholder="Enter value from 1-10"
-                            />
-                            <p className="text-xs text-gray-500">Enter a value between 1 and 10</p>
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                        <FormLabel className="flex items-center gap-1">
+                          Interior Condition
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <div className="space-y-1">
+                          <Input
+                            id="interior"
+                            type="number"
+                            min="1"
+                            max="10"
+                            value={field.value}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
+                                field.onChange(value);
+                              }
+                            }}
+                            placeholder="Enter value from 1-10"
+                            className={form.formState.errors.condition?.interior ? "border-red-500" : ""}
+                          />
+                          <p className="text-xs text-gray-500">Enter a value between 1 and 10</p>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                    <FormField
-                      control={form.control}
-                      name="condition.exterior"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Exterior Condition*</FormLabel>
-                          <div className="space-y-1">
-                            <Input
-                              id="exterior"
-                              type="number"
-                              min="1"
-                              max="10"
-                              value={field.value}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
-                                  field.onChange(value);
-                                }
-                              }}
-                              placeholder="Enter value from 1-10"
-                            />
-                            <p className="text-xs text-gray-500">Enter a value between 1 and 10</p>
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <FormField
+                    control={form.control}
+                    name="condition.exterior"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Exterior Condition
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <div className="space-y-1">
+                          <Input
+                            id="exterior"
+                            type="number"
+                            min="1"
+                            max="10"
+                            value={field.value}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
+                                field.onChange(value);
+                              }
+                            }}
+                            placeholder="Enter value from 1-10"
+                            className={form.formState.errors.condition?.exterior ? "border-red-500" : ""}
+                          />
+                          <p className="text-xs text-gray-500">Enter a value between 1 and 10</p>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                    <FormField
-                      control={form.control}
-                      name="condition.overall"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Overall Condition*</FormLabel>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              id="overall"
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={field.value}
-                              onChange={e => {
-                                const value = e.target.value;
-                                if (value === '' || (Number(value) >= 0 && Number(value) <= 100)) {
-                                  field.onChange(value);
-                                }
-                              }}
-                              placeholder="Enter overall condition"
-                            />
-                            <span className="text-gray-500 font-medium">%</span>
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <FormField
+                    control={form.control}
+                    name="condition.overall"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Overall Condition
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="overall"
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={field.value}
+                            onChange={e => {
+                              const value = e.target.value;
+                              if (value === '' || (Number(value) >= 0 && Number(value) <= 100)) {
+                                field.onChange(value);
+                              }
+                            }}
+                            placeholder="Enter overall condition"
+                            className={form.formState.errors.condition?.overall ? "border-red-500" : ""}
+                          />
+                          <span className="text-gray-500 font-medium">%</span>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                    <FormField
-                      control={form.control}
-                      name="condition.description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
+                  <FormField
+                    control={form.control}
+                    name="condition.description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Description
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
                             <FormControl>
-                            <Textarea {...field} />
+                          <Textarea 
+                            {...field} 
+                            className={form.formState.errors.condition?.description ? "border-red-500" : ""}
+                            placeholder="Enter condition description"
+                          />
                             </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -878,13 +1039,17 @@ export default function AddNewItemPage() {
                       name="cost"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Cost*</FormLabel>
+                        <FormLabel className="flex items-center gap-1">
+                          Cost
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
                           <FormControl>
                             <Input
                               value={costDisplay}
                               onChange={handleCostChange}
                               placeholder="0.00"
                               inputMode="decimal"
+                            className={form.formState.errors.cost ? "border-red-500" : ""}
                             />
                           </FormControl>
                           <FormMessage />
@@ -897,7 +1062,10 @@ export default function AddNewItemPage() {
                       name="price"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Price*</FormLabel>
+                        <FormLabel className="flex items-center gap-1">
+                          Price
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
                           <FormControl>
                             <Input
                               value={priceDisplay}
@@ -908,6 +1076,7 @@ export default function AddNewItemPage() {
                               }}
                               placeholder="0.00"
                               inputMode="decimal"
+                            className={form.formState.errors.price ? "border-red-500" : ""}
                             />
                           </FormControl>
                           <FormMessage />
@@ -951,11 +1120,11 @@ export default function AddNewItemPage() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {consignors.map((consignor) => (
-                                    <SelectItem key={consignor.external_id} value={consignor.external_id}>
-                                      {consignor.first_name} {consignor.last_name}
-                                    </SelectItem>
-                                  ))}
+                                {consignors.map((consignor) => (
+                                  <SelectItem key={consignor.external_id} value={consignor.external_id}>
+                                    {consignor.first_name} {consignor.last_name}
+                                  </SelectItem>
+                                ))}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -969,31 +1138,34 @@ export default function AddNewItemPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Consignor Selling Price</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  value={consignorPriceDisplay}
-                                  onChange={e => {
-                                    const raw = parseCurrencyInput(e.target.value);
-                                    field.onChange(raw);
-                                    setConsignorPriceDisplay(e.target.value === "" ? "" : raw ? formatCurrency(raw) : "");
-                                  }}
-                                  placeholder="0.00"
-                                  inputMode="decimal"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </>
-                    )}
+                            <FormControl>
+                              <Input 
+                                value={consignorPriceDisplay}
+                                onChange={e => {
+                                  const raw = parseCurrencyInput(e.target.value);
+                                  field.onChange(raw);
+                                  setConsignorPriceDisplay(e.target.value === "" ? "" : raw ? formatCurrency(raw) : "");
+                                }}
+                                placeholder="0.00"
+                                inputMode="decimal"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
 
                   <FormField
                     control={form.control}
                     name="stock.min_qty"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Minimum Quantity*</FormLabel>
+                        <FormLabel className="flex items-center gap-1">
+                          Minimum Quantity
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
                               <FormControl>
                                 <Input 
                                   type="number" 
@@ -1004,6 +1176,7 @@ export default function AddNewItemPage() {
                               const value = e.target.value === '' ? 0 : parseInt(e.target.value);
                               field.onChange(value);
                             }}
+                            className={form.formState.errors.stock?.min_qty ? "border-red-500" : ""}
                                 />
                               </FormControl>
                         <FormDescription>
@@ -1019,7 +1192,10 @@ export default function AddNewItemPage() {
                     name="stock.qty_in_stock"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Quantity in Stock*</FormLabel>
+                        <FormLabel className="flex items-center gap-1">
+                          Quantity in Stock
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 
@@ -1030,6 +1206,7 @@ export default function AddNewItemPage() {
                               const value = e.target.value === '' ? 0 : parseInt(e.target.value);
                               field.onChange(value);
                             }}
+                            className={form.formState.errors.stock?.qty_in_stock ? "border-red-500" : ""}
                           />
                         </FormControl>
                         <FormDescription>
@@ -1046,20 +1223,20 @@ export default function AddNewItemPage() {
                     
                     <div className="space-y-4">
                       <h3 className="text-sm font-medium">Inclusions</h3>
-                      <div className="flex flex-col sm:flex-row gap-2 w-full">
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="flex-1">
                         <Input
                           placeholder="Type inclusion and press Enter"
                           value={newInclusion}
                           onChange={(e) => setNewInclusion(e.target.value)}
                           onKeyPress={handleKeyPress}
-                          className="w-full sm:w-auto"
                         />
+                      </div>
                         <Button
                           type="button"
                           variant="outline"
                           size="icon"
                           onClick={() => handleAddInclusion(newInclusion)}
-                          className="w-full sm:w-auto"
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
@@ -1108,127 +1285,127 @@ export default function AddNewItemPage() {
                     </div>
                   </div>
 
+                <div className="space-y-4">
+                  <h2 className="text-xl font-semibold">Product Images</h2>
                   <div className="space-y-4">
-                    <h2 className="text-xl font-semibold">Product Images</h2>
-                    <div className="space-y-4">
-                      <DragDropContext onDragEnd={handleDragEnd}>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                          {/* Pending Images */}
-                          <Droppable droppableId="pending" direction="horizontal">
-                            {(provided: DroppableProvided) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.droppableProps}
-                                className="contents"
-                              >
-                                {previewUrls.map((url, index) => (
-                                  <Draggable
-                                    key={`pending-${index}`}
-                                    draggableId={`pending-${index}`}
-                                    index={index}
-                                  >
-                                    {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
-                                      <div
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        {...provided.dragHandleProps}
-                                        className={`relative group ${
-                                          snapshot.isDragging ? 'z-50 shadow-lg' : ''
-                                        }`}
-                                        style={{
-                                          ...provided.draggableProps.style,
-                                          transform: snapshot.isDragging
-                                            ? provided.draggableProps.style?.transform
-                                            : 'none',
-                                        }}
-                                      >
-                                        <div className="aspect-square relative rounded-lg overflow-hidden border">
-                                          <Image
-                                            src={url}
-                                            alt={`Pending image ${index + 1}`}
-                                            fill
-                                            className="object-cover"
-                                          />
-                                        </div>
-                                        <button
-                                          type="button"
-                                          onClick={() => removePendingImage(index)}
-                                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                          <X className="h-4 w-4" />
-                                        </button>
-                                        <div className="absolute bottom-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
-                                          Pending
-                                        </div>
+                    <DragDropContext onDragEnd={handleDragEnd}>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {/* Pending Images */}
+                        <Droppable droppableId="pending" direction="horizontal">
+                          {(provided: DroppableProvided) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.droppableProps}
+                              className="contents"
+                            >
+                              {previewUrls.map((url, index) => (
+                                <Draggable
+                                  key={`pending-${index}`}
+                                  draggableId={`pending-${index}`}
+                                  index={index}
+                                >
+                                  {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                      className={`relative group ${
+                                        snapshot.isDragging ? 'z-50 shadow-lg' : ''
+                                      }`}
+                                      style={{
+                                        ...provided.draggableProps.style,
+                                        transform: snapshot.isDragging
+                                          ? provided.draggableProps.style?.transform
+                                          : 'none',
+                                      }}
+                                    >
+                                      <div className="aspect-square relative rounded-lg overflow-hidden border">
+                                        <Image
+                                          src={url}
+                                          alt={`Pending image ${index + 1}`}
+                                          fill
+                                          className="object-cover"
+                                        />
                                       </div>
-                                    )}
-                                  </Draggable>
-                                ))}
-                                {provided.placeholder}
-                              </div>
-                            )}
-                          </Droppable>
-
-                          {/* Upload Button */}
-                          <label className="aspect-square relative rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors cursor-pointer flex items-center justify-center">
-                            <div className="text-center">
-                              <Upload className="h-8 w-8 mx-auto text-gray-400" />
-                              <span className="mt-2 block text-sm text-gray-500">
-                                Upload Image
-                              </span>
-                              <span className="mt-1 block text-xs text-gray-400">
-                                Max 5MB per image
-                              </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => removePendingImage(index)}
+                                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </button>
+                                      <div className="absolute bottom-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
+                                        Pending
+                                      </div>
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))}
+                              {provided.placeholder}
                             </div>
-                            <input
-                              type="file"
-                              className="hidden"
-                              accept={ALLOWED_FILE_TYPES.join(',')}
-                              multiple
-                              onChange={handleImageUpload}
-                              disabled={uploadingImages}
-                            />
-                          </label>
-                        </div>
-                      </DragDropContext>
+                          )}
+                        </Droppable>
 
-                      {/* Status Messages */}
-                      {uploadingImages && (
-                        <div className="text-sm text-gray-500">
-                          Uploading images...
-                        </div>
-                      )}
-                      {pendingImages.length > 0 && (
-                        <div className="text-sm text-blue-500">
-                          {pendingImages.length} image(s) ready to upload
-                        </div>
-                      )}
-                      <div className="text-xs text-gray-500 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
-                        Drag and drop to reorder images
+                        {/* Upload Button */}
+                        <label className="aspect-square relative rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors cursor-pointer flex items-center justify-center">
+                          <div className="text-center">
+                            <Upload className="h-8 w-8 mx-auto text-gray-400" />
+                            <span className="mt-2 block text-sm text-gray-500">
+                              Upload Image
+                            </span>
+                            <span className="mt-1 block text-xs text-gray-400">
+                              Max 5MB per image
+                            </span>
+                          </div>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept={ALLOWED_FILE_TYPES.join(',')}
+                            multiple
+                            onChange={handleImageUpload}
+                            disabled={uploadingImages}
+                          />
+                        </label>
                       </div>
+                    </DragDropContext>
+
+                    {/* Status Messages */}
+                    {uploadingImages && (
+                      <div className="text-sm text-gray-500">
+                        Uploading images...
+                      </div>
+                    )}
+                    {pendingImages.length > 0 && (
+                      <div className="text-sm text-blue-500">
+                        {pendingImages.length} image(s) ready to upload
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-500 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Drag and drop to reorder images
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex flex-col md:flex-row justify-end gap-y-2 md:gap-y-0 md:gap-x-3 pt-6 w-full mt-4">
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      disabled={isSubmitting}
-                      className="w-full md:w-auto order-1 md:order-none"
-                    >
+                <div className="flex flex-col md:flex-row justify-end gap-y-2 md:gap-y-0 md:gap-x-3 pt-6 w-full mt-4">
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    disabled={isSubmitting}
+                    className="w-full md:w-auto order-1 md:order-none"
+                  >
                       Save & Add New Product
                     </Button>
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full md:w-auto order-2 md:order-none"
-                    >
-                      <Save className="mr-2 h-4 w-4" />
-                      {isSubmitting ? "Saving..." : "Save Product"}
-                    </Button>
-                    <Link href="/inventory" passHref className="w-full md:w-auto order-3 md:order-none">
-                      <Button variant="destructive" className="w-full md:w-auto">Cancel</Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full md:w-auto order-2 md:order-none"
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    {isSubmitting ? "Saving..." : "Save Product"}
+                  </Button>
+                  <Link href="/inventory" passHref className="w-full md:w-auto order-3 md:order-none">
+                    <Button variant="destructive" className="w-full md:w-auto">Cancel</Button>
                     </Link>
                   </div>
                 </form>
