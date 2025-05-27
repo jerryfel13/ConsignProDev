@@ -76,6 +76,7 @@ type Product = {
   stock: {
     min_qty: number;
     avail_qty: number;
+    qty_in_stock: number;
     sold_stock: number;
   };
   is_consigned: boolean;
@@ -464,7 +465,7 @@ export default function InventoryPage() {
                         <td className="p-2 sm:p-3 text-left align-middle w-[220px] truncate max-w-[200px]">{product.name}</td>
                         <td className="p-2 sm:p-3 text-left align-middle w-[120px] truncate max-w-[100px]">{product.category.name}</td>
                         <td className="p-2 sm:p-3 text-left align-middle w-[120px] truncate max-w-[100px]">{product.brand.name}</td>
-                        <td className="p-2 sm:p-3 text-left align-middle w-[80px]">{product.stock.avail_qty}</td>
+                        <td className="p-2 sm:p-3 text-left align-middle w-[80px]">{product.stock.qty_in_stock}</td>
                         <td className="p-2 sm:p-3 text-left align-middle w-[110px]">₱{Number(product.price).toLocaleString()}</td>
                         <td className="p-2 sm:p-3 text-left align-middle w-[110px]">{product.is_consigned ? "Yes" : "No"}</td>
                         <td className="p-2 sm:p-3 text-left align-middle w-[160px]">
