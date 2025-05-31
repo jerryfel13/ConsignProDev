@@ -270,27 +270,19 @@ interface ClientsTableProps {
   initialClients: Client[];
   error?: string;
   loading?: boolean;
+  onAddClient: () => void;
 }
 
-export function ClientsTable({ initialClients, error, loading = false }: ClientsTableProps) {
-  const [clients, setClients] = useState<Client[]>(initialClients);
+export function ClientsTable({ initialClients, error, loading = false, onAddClient }: ClientsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState("");
-  const [searchType, setSearchType] = useState<"name" | "contact" | "id">(
-    "name"
-  );
+  const [searchType, setSearchType] = useState<"name" | "contact" | "id">("name");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  useEffect(() => {
-    setClients(initialClients);
-    // Log the initial clients data
-    console.log("Initial Clients Data:", initialClients);
-  }, [initialClients]);
-
   const table = useReactTable({
-    data: clients,
+    data: initialClients,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -310,16 +302,6 @@ export function ClientsTable({ initialClients, error, loading = false }: Clients
       return value.includes(filterValue.toLowerCase());
     },
   });
-
-  // Log the current table data whenever it changes
-  useEffect(() => {
-    console.log("Current Table Data:", table.getRowModel().rows.map(row => row.original));
-  }, [table.getRowModel().rows]);
-
-  const handleClientAdded = (newClient: Client) => {
-    setClients((prev) => [...prev, newClient]);
-    console.log("New Client Added:", newClient);
-  };
 
   if (error) {
     return (
@@ -389,7 +371,7 @@ export function ClientsTable({ initialClients, error, loading = false }: Clients
                 </SelectContent>
               </Select>
               <Button
-                onClick={() => setIsModalOpen(true)}
+                onClick={onAddClient}
                 size="sm"
                 className="h-9"
               >
@@ -486,7 +468,6 @@ export function ClientsTable({ initialClients, error, loading = false }: Clients
       <AddClientModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onClientAdded={handleClientAdded}
       />
     </Card>
   );

@@ -56,7 +56,9 @@ export default function ClientsPage() {
   });
 
   const handleClientAdded = (newClient: any) => {
-    queryClient.setQueryData(['clients'], (old: any[] = []) => [...old, newClient]);
+    // Invalidate and refetch the clients query
+    queryClient.invalidateQueries({ queryKey: ['clients'] });
+    setIsModalOpen(false);
   };
 
   if (error) {
@@ -81,7 +83,11 @@ export default function ClientsPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : (
-          <ClientsTable initialClients={clients} loading={isLoading} />
+          <ClientsTable 
+            initialClients={clients} 
+            loading={isLoading} 
+            onAddClient={() => setIsModalOpen(true)}
+          />
         )}
       </div>
       <AddClientModal

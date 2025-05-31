@@ -21,10 +21,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <Providers>
-          <ThemeProvider defaultTheme="light">
-            {children}
-            <Toaster position="top-right" />
-          </ThemeProvider>
+        <ThemeProvider defaultTheme="light">
+          {children}
+          <Toaster position="top-right" />
+        </ThemeProvider>
         </Providers>
       </body>
     </html>
