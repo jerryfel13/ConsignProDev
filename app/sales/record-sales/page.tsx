@@ -24,7 +24,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 
 interface Product {
-  product_external_id: string;
+  stock_external_id: string;
+  product_ext_id: string;
   name: string;
   price: string;
   stock: {
@@ -34,16 +35,21 @@ interface Product {
     name: string;
   };
   code: string;
+  images: string[];
+  category?: {
+    name: string;
+  };
 }
 
 interface Client {
   external_id: string;
   first_name: string;
   last_name: string;
+  is_consignor: boolean;
 }
 
 interface SelectedProduct {
-  product_ext_id: string;
+  stock_external_id: string;
   qty: number;
   images: string[] | null;
   name: string;
@@ -54,7 +60,11 @@ export default function CreateReceiptPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
+  const [clientSearch, setClientSearch] = useState("");
+  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+  const [showConsignorsOnly, setShowConsignorsOnly] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
+  const [productSearch, setProductSearch] = useState("");
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [isLayaway, setIsLayaway] = useState(false);
@@ -103,12 +113,11 @@ export default function CreateReceiptPage() {
         });
 
         // Fetch products
-        const productsResponse = await axios.get('/api/products', {
+        const productsResponse =  await axios.get("https://lwphsims-uat.up.railway.app/products", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
           params: {
-            isConsigned: 'Y',
             pageNumber: 1,
             displayPerPage: 100,
             sortBy: 'name',
@@ -120,12 +129,14 @@ export default function CreateReceiptPage() {
           setClients(clientsResponse.data.data.map((c: any) => ({
             external_id: c.external_id,
             first_name: c.first_name,
-            last_name: c.last_name
+            last_name: c.last_name,
+            is_consignor: c.is_consignor || false
           })));
         }
 
         if (productsResponse.data.status?.success) {
           setProducts(productsResponse.data.data);
+          console.log(productsResponse.data.data);
         }
       } catch (error: any) {
         console.error("Failed to fetch data:", error);
@@ -146,6 +157,28 @@ export default function CreateReceiptPage() {
     fetchData();
   }, []);
 
+  // Update filtered clients when search or clients change
+  useEffect(() => {
+    let filtered = clients;
+    
+    // Filter by consignor status
+    if (showConsignorsOnly) {
+      filtered = filtered.filter(client => client.is_consignor);
+    }
+
+    // Filter by search text
+    if (clientSearch.trim() !== "") {
+      const searchLower = clientSearch.toLowerCase();
+      filtered = filtered.filter(client => 
+        client.first_name.toLowerCase().includes(searchLower) ||
+        client.last_name.toLowerCase().includes(searchLower) ||
+        client.external_id.toLowerCase().includes(searchLower)
+      );
+    }
+
+    setFilteredClients(filtered);
+  }, [clientSearch, clients, showConsignorsOnly]);
+
   // Calculate total amount
   const calculateTotal = () => {
     const subtotal = selectedProducts.reduce((sum, product) => {
@@ -162,7 +195,29 @@ export default function CreateReceiptPage() {
     }
   };
 
+  // Update payment amount when total changes or layaway status changes
+  useEffect(() => {
+    if (isLayaway) {
+      setPaymentAmount("0");
+    } else {
+      setPaymentAmount(calculateTotal().toString());
+    }
+  }, [isLayaway, selectedProducts, isDiscounted, discountType, discountValue]);
+
   const handleSubmit = async () => {
+    // User-friendly validation
+    if (!selectedClient) {
+      toast.error("Please select a client.");
+      return;
+    }
+    if (selectedProducts.length === 0) {
+      toast.error("Please add at least one product.");
+      return;
+    }
+    if (!isLayaway && (!paymentAmount || isNaN(Number(paymentAmount)) || Number(paymentAmount) <= 0)) {
+      toast.error("Payment amount must be greater than 0.");
+      return;
+    }
     try {
       setIsSubmitting(true);
       const token = localStorage.getItem("token");
@@ -179,7 +234,7 @@ export default function CreateReceiptPage() {
         client_ext_id: selectedClient,
         type: isLayaway ? "L" : "R",
         products: selectedProducts.map(product => ({
-          product_ext_id: product.product_ext_id,
+          product_ext_id: product.stock_external_id,
           qty: product.qty,
           images: product.images
         })),
@@ -220,7 +275,12 @@ export default function CreateReceiptPage() {
       }
     } catch (error: any) {
       console.error("Failed to submit sale:", error);
-      toast.error(error.response?.data?.message || "An unexpected error occurred");
+      if (error.response) {
+        console.error("API error response:", error.response.data);
+        toast.error(error.response.data?.message || error.response.data?.status?.message || JSON.stringify(error.response.data) || "An unexpected error occurred");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -249,25 +309,92 @@ export default function CreateReceiptPage() {
             {/* Client Selection */}
             <div>
               <label className="block mb-1">Client</label>
-              <Select
-                value={selectedClient}
-                onValueChange={setSelectedClient}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.external_id} value={client.external_id}>
-                      {client.first_name} {client.last_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-between"
+                  >
+                    {selectedClient ? 
+                      clients.find(c => c.external_id === selectedClient)?.first_name + " " + 
+                      clients.find(c => c.external_id === selectedClient)?.last_name 
+                      : "Select a client"}
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[80vh]">
+                  <DialogHeader>
+                    <DialogTitle>Select Client</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        placeholder="Search clients..."
+                        className="mb-2"
+                        value={clientSearch}
+                        onChange={(e) => setClientSearch(e.target.value)}
+                      />
+                      {clientSearch && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                          onClick={() => setClientSearch("")}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={showConsignorsOnly}
+                        onCheckedChange={setShowConsignorsOnly}
+                      />
+                      <Label>Show Consignors Only</Label>
+                    </div>
+                  </div>
+                  <ScrollArea className="h-[60vh] pr-4">
+                    <div className="grid grid-cols-1 gap-2">
+                      {filteredClients.map((client) => (
+                        <div
+                          key={client.external_id}
+                          className={`border rounded-lg p-4 hover:border-blue-500 transition-colors cursor-pointer ${
+                            selectedClient === client.external_id ? 'border-blue-500 bg-blue-50' : ''
+                          }`}
+                          onClick={() => {
+                            setSelectedClient(client.external_id);
+                            // Close the dialog after selection
+                            const closeButton = document.querySelector('[data-dialog-close]');
+                            if (closeButton instanceof HTMLElement) {
+                              closeButton.click();
+                            }
+                          }}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <h3 className="font-medium">{client.first_name} {client.last_name}</h3>
+                              <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <span>ID: {client.external_id}</span>
+                                {client.is_consignor && (
+                                  <Badge variant="secondary" className="ml-2">Consignor</Badge>
+                                )}
+                              </div>
+                            </div>
+                            {selectedClient === client.external_id && (
+                              <Badge variant="default">Selected</Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </DialogContent>
+              </Dialog>
             </div>
 
             {/* Products Selection */}
-            <div>
+              <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block">Products</label>
                 <Dialog open={isProductModalOpen} onOpenChange={setIsProductModalOpen}>
@@ -279,72 +406,118 @@ export default function CreateReceiptPage() {
                       <Plus className="inline-block mr-1" size={18}/>Add product
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-3xl max-h-[80vh]">
+                  <DialogContent className="flex flex-col h-[80vh] max-h-[80vh] max-w-3xl w-full">
                     <DialogHeader>
                       <DialogTitle>Select Products</DialogTitle>
                     </DialogHeader>
-                    <ScrollArea className="h-[60vh] pr-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {products.map((product) => (
-                          <div 
-                            key={product.product_external_id}
-                            className="border rounded-lg p-4 hover:border-blue-500 transition-colors"
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <h3 className="font-medium">{product.brand.name} {product.name}</h3>
-                                <p className="text-sm text-gray-500">Code: {product.code}</p>
-                              </div>
-                              <Badge 
-                                variant={product.stock.qty_in_stock > 0 ? "default" : "destructive"}
+                    <div className="mb-4">
+                <Input
+                        type="text"
+                        placeholder="Search products..."
+                        value={productSearch}
+                        onChange={e => setProductSearch(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex-1 min-h-0">
+                      <ScrollArea className="h-full pr-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {products
+                            .filter(product => product.stock.qty_in_stock > 0)
+                            .filter(product => {
+                              const search = productSearch.toLowerCase();
+                              return (
+                                product.name.toLowerCase().includes(search) ||
+                                product.brand.name.toLowerCase().includes(search) ||
+                                product.code.toLowerCase().includes(search)
+                              );
+                            })
+                            .map((product) => (
+                              <div
+                                key={product.stock_external_id}
+                                className={`bg-white border rounded-xl shadow-sm transition-all flex flex-col h-full p-4 relative
+                                  ${selectedQuantity[product.stock_external_id] > 0 ? 'border-blue-400 ring-2 ring-blue-100' : 'hover:border-blue-300'}`}
                               >
-                                {product.stock.qty_in_stock > 0 ? `In Stock: ${product.stock.qty_in_stock}` : "Out of Stock"}
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between items-center mt-4">
-                              <div className="text-lg font-semibold">
-                                ₱{Number(product.price).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                <div className="flex items-center gap-3 mb-3">
+                                  <div className="w-16 h-16 flex-shrink-0 rounded-lg bg-gray-100 border flex items-center justify-center overflow-hidden">
+                                    {product.images && product.images.length > 0 ? (
+                                      <img src={product.images[0]} alt={product.name} className="object-cover w-full h-full" />
+                                    ) : (
+                                      <span className="text-3xl text-gray-300">👜</span>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex flex-wrap gap-1 mb-1">
+                                      <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded font-medium">
+                                        {product.brand.name}
+                                      </span>
+                                      {product.category && (
+                                        <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-medium">
+                                          {product.category.name}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <h3 className="font-semibold text-base text-gray-900 truncate">{product.name}</h3>
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className={`font-semibold text-blue-700 ${Number(product.price).toLocaleString('en-US', { minimumFractionDigits: 2 }).length > 10 ? 'text-sm' : 'text-base'}`}>
+                                    ₱{Number(product.price).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                  </span>
+                                  <span
+                                    className={`inline-block px-3 py-1 rounded-full text-xs font-medium border transition-colors
+                                      ${product.stock.qty_in_stock > 0
+                                        ? 'bg-green-100 text-green-800 border-green-200'
+                                        : 'bg-gray-200 text-gray-500 border-gray-300'}
+                                    `}
+                                  >
+                                    In Stock: {product.stock.qty_in_stock}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between mt-auto pt-2">
+                                  <div className="flex items-center gap-2 w-full justify-center">
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="min-w-8 h-8 sm:min-w-8 sm:h-8 text-base"
+                                      onClick={() => {
+                                        setSelectedQuantity(prev => ({
+                                          ...prev,
+                                          [product.stock_external_id]: Math.max(0, (prev[product.stock_external_id] || 0) - 1)
+                                        }));
+                                      }}
+                                      disabled={!selectedQuantity[product.stock_external_id]}
+                                    >
+                                      -
+                                    </Button>
+                                    <span className="min-w-8 text-center font-semibold text-base sm:text-lg">
+                                      {selectedQuantity[product.stock_external_id] || 0}
+                                    </span>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="min-w-8 h-8 sm:min-w-8 sm:h-8 text-base"
+                                      onClick={() => {
+                                        setSelectedQuantity(prev => ({
+                                          ...prev,
+                                          [product.stock_external_id]: (prev[product.stock_external_id] || 0) + 1
+                                        }));
+                                      }}
+                                      disabled={!product.stock.qty_in_stock ||
+                                        (selectedQuantity[product.stock_external_id] || 0) >= product.stock.qty_in_stock}
+                                    >
+                                      +
+                                    </Button>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedQuantity(prev => ({
-                                      ...prev,
-                                      [product.product_external_id]: Math.max(0, (prev[product.product_external_id] || 0) - 1)
-                                    }));
-                                  }}
-                                  disabled={!selectedQuantity[product.product_external_id]}
-                                >
-                                  -
-                                </Button>
-                                <span className="w-8 text-center">
-                                  {selectedQuantity[product.product_external_id] || 0}
-                                </span>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedQuantity(prev => ({
-                                      ...prev,
-                                      [product.product_external_id]: (prev[product.product_external_id] || 0) + 1
-                                    }));
-                                  }}
-                                  disabled={!product.stock.qty_in_stock || 
-                                    (selectedQuantity[product.product_external_id] || 0) >= product.stock.qty_in_stock}
-                                >
-                                  +
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                    <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
+                            ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                    <div className="pt-4 pb-2 flex flex-col sm:flex-row justify-end gap-2 border-t z-10 mt-4 bg-white">
                       <Button
                         variant="outline"
+                        className="w-full sm:w-auto"
                         onClick={() => {
                           setIsProductModalOpen(false);
                           setSelectedQuantity({});
@@ -353,22 +526,37 @@ export default function CreateReceiptPage() {
                         Cancel
                       </Button>
                       <Button
+                        className="w-full sm:w-auto font-semibold"
                         onClick={() => {
                           // Add selected products to the list
                           const newProducts = Object.entries(selectedQuantity)
                             .filter(([_, qty]) => qty > 0)
-                            .map(([productId, qty]) => {
-                              const product = products.find(p => p.product_external_id === productId);
+                            .map(([stockExternalId, qty]) => {
+                              const product = products.find(p => p.stock_external_id === stockExternalId);
                               return {
-                                product_ext_id: productId,
+                                stock_external_id: stockExternalId,
                                 qty,
-                                images: null,
+                                images: product?.images || null,
                                 name: `${product?.brand.name} ${product?.name}`,
                                 price: product?.price || "0"
                               };
                             });
 
-                          setSelectedProducts(prev => [...prev, ...newProducts]);
+                          setSelectedProducts(prev => {
+                            const updated = [...prev];
+                            newProducts.forEach(newProd => {
+                              const existingIdx = updated.findIndex(p => p.stock_external_id === newProd.stock_external_id);
+                              if (existingIdx !== -1) {
+                                updated[existingIdx] = {
+                                  ...updated[existingIdx],
+                                  qty: updated[existingIdx].qty + newProd.qty
+                                };
+                              } else {
+                                updated.push(newProd);
+                              }
+                            });
+                            return updated;
+                          });
                           setIsProductModalOpen(false);
                           setSelectedQuantity({});
                         }}
@@ -446,7 +634,7 @@ export default function CreateReceiptPage() {
                       <SelectItem value="4">4 Months</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
+              </div>
               <div>
                   <label className="block mb-1">Due Date</label>
                 <Input
@@ -532,6 +720,7 @@ export default function CreateReceiptPage() {
                   onChange={(e) => setPaymentAmount(e.target.value)}
                   min="0"
                   step="0.01"
+                  disabled={!isLayaway}
                 />
               </div>
               <div>
