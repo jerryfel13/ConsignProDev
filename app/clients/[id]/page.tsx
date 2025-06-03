@@ -101,26 +101,6 @@ const items = [
   },
 ];
 
-// Mock data for transactions
-const transactions = [
-  {
-    id: 1,
-    date: "2023-06-01",
-    type: "Sale",
-    item: "Gucci Dionysus Bag",
-    amount: "$1,200.00",
-    status: "Completed",
-  },
-  {
-    id: 2,
-    date: "2023-07-15",
-    type: "Payout",
-    item: "-",
-    amount: "$960.00",
-    status: "Completed",
-  },
-];
-
 // Mock consignments data
 const clientConsignments = [
   {
@@ -191,6 +171,11 @@ export default function ClientDetailPage({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Transactions state
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [transactionsError, setTransactionsError] = useState<string | null>(null);
+
   // Properly unwrap params using React.use()
   const unwrappedParams = use(params);
   const clientId = unwrappedParams.id;
@@ -226,6 +211,35 @@ export default function ClientDetailPage({
     };
 
     fetchClientData();
+  }, [clientId]);
+
+  // Fetch client transactions for the tab
+  useEffect(() => {
+    if (!clientId) return;
+    setLoadingTransactions(true);
+    setTransactionsError(null);
+    axios
+      .get(`https://lwphsims-uat.up.railway.app/sales/client/${clientId}/transactions`, {
+        params: {
+          pageNumber: 1,
+          displayPerPage: 10,
+          sortBy: 'created_at',
+          orderBy: 'desc',
+        },
+      })
+      .then((res) => {
+        if (res.data.status?.success) {
+          setTransactions(res.data.data || []);
+        } else {
+          setTransactions([]);
+          setTransactionsError("No transactions found.");
+        }
+      })
+      .catch(() => {
+        setTransactions([]);
+        setTransactionsError("Failed to fetch transactions.");
+      })
+      .finally(() => setLoadingTransactions(false));
   }, [clientId]);
 
   useEffect(() => {
@@ -893,7 +907,16 @@ export default function ClientDetailPage({
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                {transactions.length > 0 ? (
+                {loadingTransactions ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2 mx-auto"></div>
+                    <span className="text-muted-foreground">Loading transactions...</span>
+                  </div>
+                ) : transactionsError ? (
+                  <div className="text-center py-12 text-destructive">
+                    {transactionsError}
+                  </div>
+                ) : transactions.length > 0 ? (
                   <table className="w-full">
                     <thead>
                       <tr className="border-b bg-gray-50">
@@ -917,14 +940,22 @@ export default function ClientDetailPage({
                     <tbody>
                       {transactions.map((transaction) => (
                         <tr
-                          key={transaction.id}
+                          key={transaction.sale_external_id}
                           className="border-b hover:bg-gray-50 transition-colors"
                         >
-                          <td className="py-4 px-4">{transaction.date}</td>
-                          <td className="py-4 px-4">{transaction.type}</td>
-                          <td className="py-4 px-4">{transaction.item}</td>
+                          <td className="py-4 px-4">
+                            {transaction.date_purchased ? new Date(transaction.date_purchased).toLocaleDateString() : "-"}
+                          </td>
+                          <td className="py-4 px-4">
+                            {transaction.type?.description || transaction.type || "-"}
+                          </td>
+                          <td className="py-4 px-4">
+                            {transaction.product && transaction.product.length > 0
+                              ? transaction.product[0].name
+                              : "-"}
+                          </td>
                           <td className="py-4 px-4 text-right font-medium">
-                            {transaction.amount}
+                            ₱{Number(transaction.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                           </td>
                           <td className="py-4 px-4 text-center">
                             <Badge

@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, Receipt, Search, SlidersHorizontal, ChevronDown, FilePlus2, CreditCard, Eye, Menu } from "lucide-react";
+import { FileText, Receipt, Search, SlidersHorizontal, ChevronDown, FilePlus2, CreditCard, Eye, Menu, Clock, Package, CheckCircle2, Ban } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import axios from "axios";
@@ -33,6 +33,16 @@ const TABS = [
 ];
 
 const API_BASE = "https://lwphsims-uat.up.railway.app";
+
+const TAB_ICONS: Record<string, React.ReactNode> = {
+  all: <Receipt className="h-5 w-5 text-muted-foreground" />,
+  regular: <CreditCard className="h-5 w-5 text-muted-foreground" />,
+  layaway: <Clock className="h-5 w-5 text-muted-foreground" />,
+  overdue: <Clock className="h-5 w-5 text-muted-foreground" />,
+  consigned: <Package className="h-5 w-5 text-muted-foreground" />,
+  paid: <CheckCircle2 className="h-5 w-5 text-muted-foreground" />,
+  cancelled: <Ban className="h-5 w-5 text-muted-foreground" />,
+};
 
 export default function SalesPage() {
   const [activeTab, setActiveTab] = useState("all");
@@ -56,7 +66,7 @@ export default function SalesPage() {
           let endpoint = `${API_BASE}${tab.endpoint}`;
           let params: any = {
             pageNumber: 1,
-            displayPerPage,
+            displayPerPage: 1, // Only need meta, not data
             sortBy: tab.value === "paid" ? "date_purchased" : "created_at",
             orderBy: "desc"
           };
@@ -66,7 +76,11 @@ export default function SalesPage() {
             params
           });
           let count = 0;
-          if (Array.isArray(response.data.data)) count = response.data.data.length;
+          if (response.data.meta && typeof response.data.meta.totalNumber === 'number') {
+            count = response.data.meta.totalNumber;
+          } else if (Array.isArray(response.data.data)) {
+            count = response.data.data.length;
+          }
           counts[tab.value] = count;
         })
       );
@@ -174,199 +188,208 @@ export default function SalesPage() {
           )}
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4 overflow-x-auto justify-start scrollbar-thin scrollbar-thumb-slate-200 hidden md:flex">
-            {TABS.map(tab => (
-              <TabsTrigger key={tab.value} value={tab.value} className="min-w-[90px] md:min-w-[120px] text-xs md:text-sm">
-                {tab.label}
-                {tab.value !== 'all' && tabCounts[tab.value] !== undefined ? ` (${tabCounts[tab.value]})` : (activeTab === tab.value && loading ? ' (...)' : '')}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 mb-6">
+          {TABS.map(tab => (
+            <div
+              key={tab.value}
+              onClick={() => setActiveTab(tab.value)}
+              className={`relative cursor-pointer transition-shadow rounded-xl border flex flex-col justify-between bg-white shadow-sm select-none p-6 min-h-[110px]
+                ${activeTab === tab.value ? 'ring-2 ring-blue-500 border-blue-500' : 'hover:shadow-md border-slate-200'}`}
+              style={{ minWidth: 0 }}
+            >
+              <div className="flex items-start justify-between w-full mb-2">
+                <span className="text-sm font-medium text-slate-700">{tab.label}</span>
+                <span>{TAB_ICONS[tab.value]}</span>
+              </div>
+              <span className="text-3xl font-bold text-slate-900 mt-2">{tabCounts[tab.value] ?? (loading && activeTab === tab.value ? '...' : 0)}</span>
+            </div>
+          ))}
+        </div>
 
-          <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <form className="relative w-full md:w-1/3" onSubmit={handleSearch}>
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search for transactions..."
-                className="pl-8 w-full text-sm md:text-base"
-                value={searchInput}
-                onChange={e => setSearchInput(e.target.value)}
-              />
-            </form>
-          </div>
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+          <form className="relative w-full md:w-1/3" onSubmit={handleSearch}>
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search for transactions..."
+              className="pl-8 w-full text-sm md:text-base"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+            />
+          </form>
+        </div>
 
-          <TabsContent value={activeTab} forceMount>
-            <div className="overflow-x-auto">
-              {loading ? (
-                <div className="text-center py-12 text-muted-foreground">Loading...</div>
-              ) : sales.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">No sales found.</div>
-              ) : (
-                <>
-                  {/* Mobile Card View */}
-                  <div className="block md:hidden">
-                    <div className="flex flex-col gap-4">
-                      {sales.map((sale: any, idx: number) => {
-                        const products = sale.product || sale.products || [];
-                        return (
-                          <div key={sale.external_id || sale.id || idx} className="rounded-lg border bg-white shadow p-4 flex flex-col gap-2">
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-base text-blue-700">{sale.Customer?.name || sale.customer_name || "-"}</span>
-                              <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                                sale.type?.code === 'L' || sale.type === 'Layaway' ? 'bg-blue-100 text-blue-700' :
-                                sale.type?.code === 'R' || sale.type === 'Regular' ? 'bg-green-100 text-green-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
-                                {sale.type?.description || sale.type || "-"}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm">
+        <div className="overflow-x-auto">
+          {loading ? (
+            <div className="text-center py-12 text-muted-foreground">Loading...</div>
+          ) : sales.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">No sales found.</div>
+          ) : (
+            <>
+              {/* Mobile Card View */}
+              <div className="block md:hidden">
+                <div className="flex flex-col gap-4">
+                  {sales.map((sale: any, idx: number) => {
+                    const products = sale.product || sale.products || [];
+                    return (
+                      <div key={sale.external_id || sale.id || idx} className="rounded-lg border bg-white shadow p-4 flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-base text-black">{sale.Customer?.name || sale.customer_name || "-"}</span>
+                          <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                            sale.type?.code === 'L' || sale.type === 'Layaway' ? 'bg-blue-100 text-blue-700' :
+                            sale.type?.code === 'R' || sale.type === 'Regular' ? 'bg-green-100 text-green-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {sale.type?.description || sale.type || "-"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          {products.length === 1 && (
+                            <>
+                              <span className="inline-block w-6 h-6 bg-slate-200 rounded-md flex items-center justify-center text-lg">👜</span>
+                              <span className="truncate font-medium">{products[0].name}</span>
+                              <span className="text-xs text-gray-500 ml-1">x{products[0].qty}</span>
+                            </>
+                          )}
+                          {products.length > 1 && (
+                            <>
+                              <span className="inline-block w-6 h-6 bg-slate-200 rounded-md flex items-center justify-center text-lg">👜</span>
+                              <span className="truncate font-medium">{products[0].name}</span>
+                              <span className="text-xs text-gray-500 ml-1">+{products.length - 1} more</span>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2 text-xs mt-2">
+                          <span className="font-semibold text-black">₱{Number(sale.total_amount || sale.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                          <span className="text-gray-500">{sale.date_purchased ? new Date(sale.date_purchased).toLocaleDateString() : "-"}</span>
+                          <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                            sale.status?.toLowerCase() === 'paid' ? 'bg-green-100 text-green-700' :
+                            sale.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-700' :
+                            sale.status?.toLowerCase() === 'overdue' ? 'bg-orange-100 text-orange-700' :
+                            sale.status?.toLowerCase() === 'deposit' ? 'bg-blue-100 text-blue-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {sale.status || sale.status_text || "-"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Desktop Table View */}
+              <div className="hidden md:block">
+                <table className="min-w-full border-separate border-spacing-0 rounded-xl shadow bg-white text-sm md:text-base">
+                  <thead>
+                    <tr className="bg-slate-100 text-left">
+                      <th className="px-4 py-3 font-semibold text-sm">Customer</th>
+                      <th className="px-4 py-3 font-semibold text-sm">Type</th>
+                      <th className="px-4 py-3 font-semibold text-sm">Products</th>
+                      <th className="px-4 py-3 font-semibold text-sm">Total</th>
+                      <th className="px-4 py-3 font-semibold text-sm">Date Purchased</th>
+                      <th className="px-4 py-3 font-semibold text-sm">Status</th>
+                      <th className="px-4 py-3 font-semibold text-sm">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sales.map((sale: any, idx: number) => {
+                      const products = sale.product || sale.products || [];
+                      return (
+                        <tr
+                          key={sale.external_id || sale.id || idx}
+                          className={
+                            `transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-blue-50`
+                          }
+                        >
+                          <td
+                            className="px-4 py-3 font-medium text-black whitespace-nowrap"
+                          >
+                            {sale.Customer?.name || sale.customer_name || "-"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                              sale.type?.code === 'L' || sale.type === 'Layaway' ? 'bg-blue-100 text-blue-700' :
+                              sale.type?.code === 'R' || sale.type === 'Regular' ? 'bg-green-100 text-green-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {sale.type?.description || sale.type || "-"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
                               {products.length === 1 && (
                                 <>
-                                  <span className="inline-block w-6 h-6 bg-slate-200 rounded-md flex items-center justify-center text-lg">👜</span>
-                                  <span className="truncate font-medium">{products[0].name}</span>
+                                  <span className="inline-block w-7 h-7 bg-slate-200 rounded-md flex items-center justify-center text-lg mr-2">👜</span>
+                                  <span className="truncate text-sm font-medium">{products[0].name}</span>
                                   <span className="text-xs text-gray-500 ml-1">x{products[0].qty}</span>
                                 </>
                               )}
                               {products.length > 1 && (
                                 <>
-                                  <span className="inline-block w-6 h-6 bg-slate-200 rounded-md flex items-center justify-center text-lg">👜</span>
-                                  <span className="truncate font-medium">{products[0].name}</span>
+                                  <span className="inline-block w-7 h-7 bg-slate-200 rounded-md flex items-center justify-center text-lg mr-2">👜</span>
+                                  <span className="truncate text-sm font-medium">{products[0].name}</span>
                                   <span className="text-xs text-gray-500 ml-1">+{products.length - 1} more</span>
+                                  <div className="relative group ml-2">
+                                    <span className="text-xs text-blue-600 cursor-pointer group-hover:underline">Details</span>
+                                    <div className="absolute left-0 z-10 hidden group-hover:block bg-white border rounded shadow-lg p-2 mt-1 min-w-[180px]">
+                                      <ul className="text-xs">
+                                        {products.map((p: any, pidx: number) => (
+                                          <li key={p.external_id || p.product_ext_id || pidx} className="mb-1 last:mb-0">
+                                            {p.name} <span className="text-gray-500">x{p.qty}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  </div>
                                 </>
                               )}
                             </div>
-                            <div className="flex flex-wrap gap-2 text-xs mt-2">
-                              <span className="font-semibold text-blue-700">₱{Number(sale.total_amount || sale.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                              <span className="text-gray-500">{sale.date_purchased ? new Date(sale.date_purchased).toLocaleDateString() : "-"}</span>
-                              <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                                sale.status?.toLowerCase() === 'paid' ? 'bg-green-100 text-green-700' :
-                                sale.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-700' :
-                                sale.status?.toLowerCase() === 'overdue' ? 'bg-orange-100 text-orange-700' :
-                                sale.status?.toLowerCase() === 'deposit' ? 'bg-blue-100 text-blue-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
-                                {sale.status || sale.status_text || "-"}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-              </div>
-                  {/* Desktop Table View */}
-                  <div className="hidden md:block">
-                    <table className="min-w-full border-separate border-spacing-0 rounded-xl shadow bg-white text-sm md:text-base">
-                      <thead>
-                        <tr className="bg-slate-100 text-left">
-                          <th className="px-4 py-3 font-semibold text-sm">Customer</th>
-                          <th className="px-4 py-3 font-semibold text-sm">Type</th>
-                          <th className="px-4 py-3 font-semibold text-sm">Products</th>
-                          <th className="px-4 py-3 font-semibold text-sm">Total</th>
-                          <th className="px-4 py-3 font-semibold text-sm">Date Purchased</th>
-                          <th className="px-4 py-3 font-semibold text-sm">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sales.map((sale: any, idx: number) => {
-                          const products = sale.product || sale.products || [];
-                          return (
-                            <tr
-                              key={sale.external_id || sale.id || idx}
-                              className={
-                                `transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-blue-50`
-                              }
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-black whitespace-nowrap">
+                            ₱{Number(sale.total_amount || sale.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {sale.date_purchased ? new Date(sale.date_purchased).toLocaleDateString() : "-"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                              sale.status?.toLowerCase() === 'paid' ? 'bg-green-100 text-green-700' :
+                              sale.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-700' :
+                              sale.status?.toLowerCase() === 'overdue' ? 'bg-orange-100 text-orange-700' :
+                              sale.status?.toLowerCase() === 'deposit' ? 'bg-blue-100 text-blue-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {sale.status || sale.status_text || "-"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Link
+                              href={`/clients/${sale.Customer?.external_id}/transactions/${sale.sale_external_id}`}
+                              className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-blue-100"
+                              title="View details"
                             >
-                              <td
-                                className="px-4 py-3 font-medium text-blue-700 cursor-pointer transition hover:underline hover:text-blue-900 whitespace-nowrap group"
-                              >
-                                <span className="flex items-center gap-1">
-                                  {sale.Customer?.name || sale.customer_name || "-"}
-                                  <Eye
-                                    className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition"
-                                    strokeWidth={2}
-                                  />
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                                  sale.type?.code === 'L' || sale.type === 'Layaway' ? 'bg-blue-100 text-blue-700' :
-                                  sale.type?.code === 'R' || sale.type === 'Regular' ? 'bg-green-100 text-green-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {sale.type?.description || sale.type || "-"}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                  {products.length === 1 && (
-                                    <>
-                                      <span className="inline-block w-7 h-7 bg-slate-200 rounded-md flex items-center justify-center text-lg mr-2">👜</span>
-                                      <span className="truncate text-sm font-medium">{products[0].name}</span>
-                                      <span className="text-xs text-gray-500 ml-1">x{products[0].qty}</span>
-                                    </>
-                                  )}
-                                  {products.length > 1 && (
-                                    <>
-                                      <span className="inline-block w-7 h-7 bg-slate-200 rounded-md flex items-center justify-center text-lg mr-2">👜</span>
-                                      <span className="truncate text-sm font-medium">{products[0].name}</span>
-                                      <span className="text-xs text-gray-500 ml-1">+{products.length - 1} more</span>
-                                      <div className="relative group ml-2">
-                                        <span className="text-xs text-blue-600 cursor-pointer group-hover:underline">Details</span>
-                                        <div className="absolute left-0 z-10 hidden group-hover:block bg-white border rounded shadow-lg p-2 mt-1 min-w-[180px]">
-                                          <ul className="text-xs">
-                                            {products.map((p: any, pidx: number) => (
-                                              <li key={p.external_id || p.product_ext_id || pidx} className="mb-1 last:mb-0">
-                                                {p.name} <span className="text-gray-500">x{p.qty}</span>
-                                              </li>
-                                            ))}
-                                          </ul>
-            </div>
-          </div>
-                                    </>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 font-semibold text-blue-700 whitespace-nowrap">
-                                ₱{Number(sale.total_amount || sale.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                {sale.date_purchased ? new Date(sale.date_purchased).toLocaleDateString() : "-"}
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                                  sale.status?.toLowerCase() === 'paid' ? 'bg-green-100 text-green-700' :
-                                  sale.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-700' :
-                                  sale.status?.toLowerCase() === 'overdue' ? 'bg-orange-100 text-orange-700' :
-                                  sale.status?.toLowerCase() === 'deposit' ? 'bg-blue-100 text-blue-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {sale.status || sale.status_text || "-"}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  {/* Pagination controls */}
-                  <div className="flex flex-col md:flex-row justify-end items-center gap-2 mt-4">
-                    <Button variant="outline" size="sm" onClick={handlePrev} disabled={currentPage === 1}>
-                      Previous
-                    </Button>
-                    <span className="text-sm font-medium">Page {currentPage}</span>
-                    <Button variant="outline" size="sm" onClick={handleNext} disabled={sales.length < displayPerPage}>
-                      Next
-                    </Button>
+                              <Eye strokeWidth={2} />
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-                </>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+              {/* Pagination controls */}
+              <div className="flex flex-col md:flex-row justify-end items-center gap-2 mt-4">
+                <Button variant="outline" size="sm" onClick={handlePrev} disabled={currentPage === 1}>
+                  Previous
+                </Button>
+                <span className="text-sm font-medium">Page {currentPage}</span>
+                <Button variant="outline" size="sm" onClick={handleNext} disabled={sales.length < displayPerPage}>
+                  Next
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

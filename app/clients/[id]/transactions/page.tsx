@@ -5,53 +5,45 @@ import { ArrowLeft, Calendar, CreditCard, Receipt, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import React from "react";
-
-// Mock transaction data
-const clientTransactions = [
-  {
-    id: "trx-1",
-    date: "2023-06-01",
-    formattedDate: "2023-06-01",
-    type: "Sale",
-    item: "Gucci Dionysus Bag",
-    description: "",
-    amount: "₱1,200.00",
-    status: "Completed",
-  },
-  {
-    id: "trx-2",
-    date: "2023-07-15",
-    formattedDate: "2023-07-15",
-    type: "Payout",
-    item: "-",
-    description: "",
-    amount: "₱960.00",
-    status: "Completed",
-  },
-];
+import React, { use, useEffect, useState } from "react";
+import axios from "axios";
 
 export default function ClientTransactionsPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  // This is how to handle params according to Next.js documentation
-  const { id: clientId } = params;
+  const { id: clientId } = use(params);
 
-  // Mock client data
-  const client = {
-    id: clientId,
-    name: "Jane Doe",
-    externalId: "CL001",
-    isActive: true,
-    isConsignor: true,
-  };
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const displayPerPage = 10;
 
-  // Calculate totals for summary
-  const totalPurchases = "₱1,500.00";
-  const totalConsignments = "₱2,500.00";
-  const totalPayments = "₱1,000.00";
+  useEffect(() => {
+    if (!clientId) return;
+    setLoading(true);
+    axios
+      .get(`https://lwphsims-uat.up.railway.app/sales/client/${clientId}/transactions`, {
+        params: {
+          pageNumber: currentPage,
+          displayPerPage,
+          sortBy: 'created_at',
+          orderBy: 'desc',
+        }
+      })
+      .then((res) => {
+        if (res.data.status?.success) {
+          setTransactions(res.data.data || []);
+          setError("");
+        } else {
+          setError("No transactions found.");
+        }
+      })
+      .catch(() => setError("Failed to fetch transactions."))
+      .finally(() => setLoading(false));
+  }, [clientId, currentPage]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -102,31 +94,41 @@ export default function ClientTransactionsPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {clientTransactions.map((transaction) => (
+                  {loading ? (
+                    <tr><td colSpan={6} className="text-center py-8">Loading...</td></tr>
+                  ) : error ? (
+                    <tr><td colSpan={6} className="text-center text-red-600 py-8">{error}</td></tr>
+                  ) : transactions.length === 0 ? (
+                    <tr><td colSpan={6} className="text-center py-8">No transactions found.</td></tr>
+                  ) : transactions.map((transaction) => (
                     <tr
-                      key={transaction.id}
+                      key={transaction.sale_external_id}
                       className="border-b hover:bg-gray-50 transition-colors"
                     >
                       <td className="py-4 px-4">
                         <div className="flex items-center">
                           <Calendar className="h-4 w-4 mr-2 text-gray-500" />
-                          {transaction.formattedDate}
+                          {transaction.date_purchased ? new Date(transaction.date_purchased).toLocaleDateString() : "-"}
                         </div>
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center">
                           <CreditCard className="h-4 w-4 mr-2 text-gray-500" />
-                          {transaction.type}
+                          {transaction.type?.description || transaction.type || "-"}
                         </div>
                       </td>
-                      <td className="py-4 px-4">{transaction.item}</td>
+                      <td className="py-4 px-4">
+                        {transaction.product && transaction.product.length > 0
+                          ? transaction.product[0].name
+                          : "-"}
+                      </td>
                       <td className="py-4 px-4 text-right font-medium">
-                        {transaction.amount}
+                        ₱{Number(transaction.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-4 px-4 text-center">
                         <Badge
                           variant="outline"
-                          className={`${
+                          className={`$${
                             transaction.status === "Completed"
                               ? "bg-black text-white hover:bg-black"
                               : ""
@@ -143,7 +145,7 @@ export default function ClientTransactionsPage({
                           className="h-8 w-8 p-0"
                         >
                           <Link
-                            href={`/clients/${clientId}/transactions/${transaction.id}`}
+                            href={`/clients/${clientId}/transactions/${transaction.sale_external_id}`}
                           >
                             <Eye className="h-4 w-4" />
                             <span className="sr-only">View details</span>
@@ -155,38 +157,18 @@ export default function ClientTransactionsPage({
                 </tbody>
               </table>
             </div>
+            {/* Pagination Controls */}
+            <div className="flex justify-end items-center gap-2 mt-4">
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                Previous
+              </Button>
+              <span className="text-sm font-medium">Page {currentPage}</span>
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={transactions.length < displayPerPage}>
+                Next
+              </Button>
+            </div>
           </CardContent>
         </Card>
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="shadow-sm">
-            <CardContent className="p-6">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Total Purchases</p>
-                <p className="text-2xl font-bold text-red-500">-₱1,500.00</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm">
-            <CardContent className="p-6">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Total Consignments
-                </p>
-                <p className="text-2xl font-bold text-red-500">-₱2,500.00</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm">
-            <CardContent className="p-6">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Total Payments</p>
-                <p className="text-2xl font-bold text-green-600">+₱1,000.00</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );

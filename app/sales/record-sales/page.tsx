@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
@@ -56,13 +56,22 @@ interface SelectedProduct {
   price: string;
 }
 
+// Utility functions for currency input
+function parseCurrencyInput(value: string) {
+  return value.replace(/[^0-9.]/g, "");
+}
+
+function formatCurrency(value: string | number) {
+  if (value === "" || isNaN(Number(value))) return "";
+  return Number(value).toLocaleString("en-US", { minimumFractionDigits: 2 });
+}
+
 export default function CreateReceiptPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [clientSearch, setClientSearch] = useState("");
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
-  const [showConsignorsOnly, setShowConsignorsOnly] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [productSearch, setProductSearch] = useState("");
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
@@ -72,28 +81,33 @@ export default function CreateReceiptPage() {
   const [discountType, setDiscountType] = useState<"percentage" | "flat">("percentage");
   const [discountValue, setDiscountValue] = useState("0");
   const [paymentMethod, setPaymentMethod] = useState("Cash");
-  const [paymentAmount, setPaymentAmount] = useState("0");
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentAmountDisplay, setPaymentAmountDisplay] = useState("");
   const [datePurchased, setDatePurchased] = useState(new Date().toISOString().split('T')[0]);
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [layawayMonths, setLayawayMonths] = useState("1");
   const [layawayDueDate, setLayawayDueDate] = useState("");
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [selectedQuantity, setSelectedQuantity] = useState<{ [key: string]: number }>({});
+  const [isClientDialogOpen, setIsClientDialogOpen] = useState(false);
+  const clientSectionRef = useRef<HTMLDivElement>(null);
+  const [showClientIndicator, setShowClientIndicator] = useState(false);
+  const productSectionRef = useRef<HTMLDivElement>(null);
+  const [showProductIndicator, setShowProductIndicator] = useState(false);
 
-  // Calculate due date based on number of months
-  const calculateDueDate = (months: number) => {
-    const date = new Date();
+  // Calculate due date based on base date and number of months
+  const calculateDueDate = (baseDate: string, months: number) => {
+    const date = new Date(baseDate);
     date.setMonth(date.getMonth() + months);
     return date.toISOString().split('T')[0];
   };
 
-  // Update due date when number of months changes
-  const handleMonthsChange = (value: string) => {
-    const months = parseInt(value);
-    const dueDate = calculateDueDate(months);
-    setLayawayMonths(value);
-    setLayawayDueDate(dueDate);
-  };
+  // Update due date when paymentDate or layawayMonths changes
+  useEffect(() => {
+    if (isLayaway) {
+      setLayawayDueDate(calculateDueDate(paymentDate, parseInt(layawayMonths)));
+    }
+  }, [paymentDate, layawayMonths, isLayaway]);
 
   // Fetch clients and products on component mount
   useEffect(() => {
@@ -160,12 +174,6 @@ export default function CreateReceiptPage() {
   // Update filtered clients when search or clients change
   useEffect(() => {
     let filtered = clients;
-    
-    // Filter by consignor status
-    if (showConsignorsOnly) {
-      filtered = filtered.filter(client => client.is_consignor);
-    }
-
     // Filter by search text
     if (clientSearch.trim() !== "") {
       const searchLower = clientSearch.toLowerCase();
@@ -175,9 +183,8 @@ export default function CreateReceiptPage() {
         client.external_id.toLowerCase().includes(searchLower)
       );
     }
-
     setFilteredClients(filtered);
-  }, [clientSearch, clients, showConsignorsOnly]);
+  }, [clientSearch, clients]);
 
   // Calculate total amount
   const calculateTotal = () => {
@@ -198,9 +205,11 @@ export default function CreateReceiptPage() {
   // Update payment amount when total changes or layaway status changes
   useEffect(() => {
     if (isLayaway) {
-      setPaymentAmount("0");
+      setPaymentAmount("");
     } else {
-      setPaymentAmount(calculateTotal().toString());
+      const total = calculateTotal();
+      const formatted = total ? formatCurrency(total) : "";
+      setPaymentAmount(formatted);
     }
   }, [isLayaway, selectedProducts, isDiscounted, discountType, discountValue]);
 
@@ -208,15 +217,20 @@ export default function CreateReceiptPage() {
     // User-friendly validation
     if (!selectedClient) {
       toast.error("Please select a client.");
+      setShowClientIndicator(true);
+      clientSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     if (selectedProducts.length === 0) {
       toast.error("Please add at least one product.");
       return;
     }
-    if (!isLayaway && (!paymentAmount || isNaN(Number(paymentAmount)) || Number(paymentAmount) <= 0)) {
-      toast.error("Payment amount must be greater than 0.");
-      return;
+    if (!isLayaway) {
+      const numericPaymentAmount = Number(paymentAmount.replace(/,/g, ""));
+      if (!paymentAmount || isNaN(numericPaymentAmount) || numericPaymentAmount <= 0) {
+        toast.error("Payment amount must be greater than 0.");
+        return;
+      }
     }
     try {
       setIsSubmitting(true);
@@ -307,13 +321,14 @@ export default function CreateReceiptPage() {
           
           <div className="space-y-6">
             {/* Client Selection */}
-            <div>
+            <div ref={clientSectionRef} className={showClientIndicator ? "border border-red-500 rounded-lg p-2" : ""}>
               <label className="block mb-1">Client</label>
-              <Dialog>
+              <Dialog open={isClientDialogOpen} onOpenChange={setIsClientDialogOpen}>
                 <DialogTrigger asChild>
                   <Button 
                     variant="outline" 
                     className="w-full justify-between"
+                    onClick={() => setIsClientDialogOpen(true)}
                   >
                     {selectedClient ? 
                       clients.find(c => c.external_id === selectedClient)?.first_name + " " + 
@@ -322,7 +337,7 @@ export default function CreateReceiptPage() {
                     <Plus className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[80vh]">
+                <DialogContent className="flex flex-col h-[80vh] max-h-[80vh] max-w-2xl w-full">
                   <DialogHeader>
                     <DialogTitle>Select Client</DialogTitle>
                   </DialogHeader>
@@ -346,55 +361,76 @@ export default function CreateReceiptPage() {
                         </Button>
                       )}
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={showConsignorsOnly}
-                        onCheckedChange={setShowConsignorsOnly}
-                      />
-                      <Label>Show Consignors Only</Label>
-                    </div>
                   </div>
-                  <ScrollArea className="h-[60vh] pr-4">
-                    <div className="grid grid-cols-1 gap-2">
-                      {filteredClients.map((client) => (
-                        <div
-                          key={client.external_id}
-                          className={`border rounded-lg p-4 hover:border-blue-500 transition-colors cursor-pointer ${
-                            selectedClient === client.external_id ? 'border-blue-500 bg-blue-50' : ''
-                          }`}
-                          onClick={() => {
-                            setSelectedClient(client.external_id);
-                            // Close the dialog after selection
-                            const closeButton = document.querySelector('[data-dialog-close]');
-                            if (closeButton instanceof HTMLElement) {
-                              closeButton.click();
-                            }
-                          }}
-                        >
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <h3 className="font-medium">{client.first_name} {client.last_name}</h3>
-                              <div className="flex items-center gap-2 text-sm text-gray-500">
-                                <span>ID: {client.external_id}</span>
-                                {client.is_consignor && (
-                                  <Badge variant="secondary" className="ml-2">Consignor</Badge>
-                                )}
+                  <div className="flex-1 min-h-0">
+                    <ScrollArea className="h-full pr-4">
+                      <div className="grid grid-cols-1 gap-2">
+                        {filteredClients.map((client) => (
+                          <div
+                            key={client.external_id}
+                            className={`border rounded-lg p-4 hover:border-blue-500 transition-colors cursor-pointer ${
+                              selectedClient === client.external_id ? 'border-blue-500 bg-blue-50' : ''
+                            }`}
+                            onClick={() => {
+                              setSelectedClient(client.external_id);
+                              setShowClientIndicator(false);
+                            }}
+                          >
+                            <div className="flex justify-between items-center">
+              <div>
+                                <h3 className="font-medium">{client.first_name} {client.last_name}</h3>
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                  <span>ID: {client.external_id}</span>
+                                  {client.is_consignor && (
+                                    <Badge variant="secondary" className="ml-2">Consignor</Badge>
+                                  )}
+                                </div>
                               </div>
+                              {selectedClient === client.external_id && (
+                                <Badge variant="default">Selected</Badge>
+                              )}
                             </div>
-                            {selectedClient === client.external_id && (
-                              <Badge variant="default">Selected</Badge>
-                            )}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                  <div className="pt-4 pb-2 flex flex-col sm:flex-row justify-end gap-2 border-t z-10 mt-4 bg-white">
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      onClick={() => {
+                        setSelectedClient("");
+                        setIsClientDialogOpen(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="w-full sm:w-auto font-semibold"
+                      onClick={() => {
+                        if (!selectedClient) {
+                          toast.error("Please select a client first");
+                          return;
+                        }
+                        setIsClientDialogOpen(false);
+                      }}
+                    >
+                      Confirm Selection
+                    </Button>
+                  </div>
                 </DialogContent>
               </Dialog>
             </div>
 
+            {showClientIndicator && (
+              <div className="text-red-600 text-sm mt-1">
+                Please select a client to proceed.
+              </div>
+            )}
+
             {/* Products Selection */}
-              <div>
+            <div ref={productSectionRef} className={showProductIndicator ? "border border-red-500 rounded-lg p-2" : ""}>
               <div className="flex justify-between items-center mb-2">
                 <label className="block">Products</label>
                 <Dialog open={isProductModalOpen} onOpenChange={setIsProductModalOpen}>
@@ -402,6 +438,7 @@ export default function CreateReceiptPage() {
                     <Button 
                       variant="link" 
                       className="p-0 h-auto text-blue-600"
+                      onClick={() => setShowProductIndicator(false)}
                     >
                       <Plus className="inline-block mr-1" size={18}/>Add product
                     </Button>
@@ -497,10 +534,19 @@ export default function CreateReceiptPage() {
                                       size="icon"
                                       className="min-w-8 h-8 sm:min-w-8 sm:h-8 text-base"
                                       onClick={() => {
-                                        setSelectedQuantity(prev => ({
-                                          ...prev,
-                                          [product.stock_external_id]: (prev[product.stock_external_id] || 0) + 1
-                                        }));
+                                        // Calculate total quantity including already selected products
+                                        const currentSelectedQty = selectedProducts.find(p => p.stock_external_id === product.stock_external_id)?.qty || 0;
+                                        const newQty = (selectedQuantity[product.stock_external_id] || 0) + 1;
+                                        
+                                        // Only allow if total quantity doesn't exceed stock
+                                        if (currentSelectedQty + newQty <= product.stock.qty_in_stock) {
+                                          setSelectedQuantity(prev => ({
+                                            ...prev,
+                                            [product.stock_external_id]: newQty
+                                          }));
+                                        } else {
+                                          toast.error(`Cannot add more than available stock (${product.stock.qty_in_stock})`);
+                                        }
                                       }}
                                       disabled={!product.stock.qty_in_stock ||
                                         (selectedQuantity[product.stock_external_id] || 0) >= product.stock.qty_in_stock}
@@ -542,6 +588,19 @@ export default function CreateReceiptPage() {
                               };
                             });
 
+                          // Check if adding these products would exceed stock limits
+                          const wouldExceedStock = newProducts.some(newProd => {
+                            const existingProduct = selectedProducts.find(p => p.stock_external_id === newProd.stock_external_id);
+                            const totalQty = (existingProduct?.qty || 0) + newProd.qty;
+                            const product = products.find(p => p.stock_external_id === newProd.stock_external_id);
+                            return totalQty > (product?.stock.qty_in_stock || 0);
+                          });
+
+                          if (wouldExceedStock) {
+                            toast.error("Cannot add more than available stock for some products");
+                            return;
+                          }
+
                           setSelectedProducts(prev => {
                             const updated = [...prev];
                             newProducts.forEach(newProd => {
@@ -559,11 +618,17 @@ export default function CreateReceiptPage() {
                           });
                           setIsProductModalOpen(false);
                           setSelectedQuantity({});
+                          setShowProductIndicator(false);
                         }}
                       >
                         Add Selected Products
                       </Button>
                     </div>
+                    {showProductIndicator && (
+                      <div className="text-red-600 text-sm mt-1">
+                        Please add at least one product to enable layaway.
+                      </div>
+                    )}
                   </DialogContent>
                 </Dialog>
               </div>
@@ -607,12 +672,36 @@ export default function CreateReceiptPage() {
             </div>
 
             {/* Sale Type */}
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={isLayaway}
-                onCheckedChange={setIsLayaway}
-              />
-              <Label>Layaway Sale</Label>
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={!isLayaway}
+                  onChange={() => setIsLayaway(false)}
+                  className="accent-blue-600"
+                />
+                <span className="font-medium">Regular Sale</span>
+                <span className="text-xs text-gray-500 ml-2">Full payment at purchase</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={isLayaway}
+                  onChange={() => {
+                    if (selectedProducts.length === 0) {
+                      toast.error("Please add at least one product before enabling layaway.");
+                      setShowProductIndicator(true);
+                      productSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      return;
+                    }
+                    setIsLayaway(true);
+                    setShowProductIndicator(false);
+                  }}
+                  className="accent-blue-600"
+                />
+                <span className="font-medium">Layaway Sale</span>
+                <span className="text-xs text-gray-500 ml-2">Pay in installments</span>
+              </label>
             </div>
 
             {/* Layaway Fields */}
@@ -622,7 +711,7 @@ export default function CreateReceiptPage() {
                   <label className="block mb-1">Number of Months</label>
                   <Select
                     value={layawayMonths}
-                    onValueChange={handleMonthsChange}
+                    onValueChange={(value) => setLayawayMonths(value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select months" />
@@ -715,12 +804,24 @@ export default function CreateReceiptPage() {
               <div>
                 <label className="block mb-1">Payment Amount</label>
                 <Input
-                  type="number"
+                  type="text"
                   value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  min="0"
-                  step="0.01"
-                  disabled={!isLayaway}
+                  onChange={e => {
+                    if (!isLayaway) return;
+                    const raw = parseCurrencyInput(e.target.value);
+                    setPaymentAmount(raw);
+                  }}
+                  onBlur={() => {
+                    if (!isLayaway) return;
+                    setPaymentAmount(paymentAmount ? formatCurrency(paymentAmount) : "");
+                  }}
+                  onFocus={() => {
+                    if (!isLayaway) return;
+                    setPaymentAmount(paymentAmount.replace(/,/g, ""));
+                  }}
+                  readOnly={!isLayaway}
+                  inputMode="decimal"
+                  placeholder="0.00"
                 />
               </div>
               <div>
