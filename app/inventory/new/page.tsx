@@ -352,6 +352,9 @@ export default function AddNewItemPage() {
 
   const router = useRouter();
 
+  // Get logged-in user's external ID
+  const userExternalId = typeof window !== 'undefined' ? localStorage.getItem("user_external_id") : null;
+
   const onSubmit: SubmitHandler<FormData> = async (data, event) => {
     try {
       setIsSubmitting(true);
@@ -391,6 +394,32 @@ export default function AddNewItemPage() {
         return;
       }
 
+      // Additional validation for consigned products
+      if (data.is_consigned) {
+        if (!data.consignor_ext_id || !data.consignor_selling_price || !data.consigned_date) {
+          setErrorMessage("For consigned products, Consignor, Consignor Selling Price, and Consigned Date are required.");
+          setShowErrorPrompt(true);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // Validate qty_in_stock >= 1
+      if (Number(data.stock.qty_in_stock) < 1) {
+        setErrorMessage("Quantity in Stock must be at least 1.");
+        setShowErrorPrompt(true);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Validate created_by
+      if (!userExternalId) {
+        setErrorMessage("User ID not found. Please log in again.");
+        setShowErrorPrompt(true);
+        setIsSubmitting(false);
+        return;
+      }
+
       // First, upload any pending images to Cloudinary
       let newImageUrls: string[] = [];
       if (pendingImages.length > 0) {
@@ -398,7 +427,7 @@ export default function AddNewItemPage() {
           setUploadingImages(true);
           newImageUrls = await uploadImagesToCloudinary(pendingImages);
           setUploadingImages(false);
-    } catch (error) {
+        } catch (error) {
           console.error("Error uploading images:", error);
           setErrorMessage("Unable to upload images. Please check your internet connection and try again.");
           setShowErrorPrompt(true);
@@ -414,20 +443,38 @@ export default function AddNewItemPage() {
         qty_in_stock: Number(data.stock.qty_in_stock)
       };
 
-      // Prepare the request payload
-      const payload = {
-        ...data,
-        stock: stockData,
+      // Prepare the request payload to match API contract
+      const payload: any = {
+        category_ext_id: data.category_ext_id,
+        brand_ext_id: data.brand_ext_id,
+        name: data.name,
+        material: data.material || undefined,
+        hardware: data.hardware || undefined,
+        code: data.code || undefined,
+        measurement: data.measurement || undefined,
+        model: data.model || undefined,
+        auth_ext_id: data.auth_ext_id || undefined,
+        inclusion: data.inclusion,
         images: newImageUrls,
         condition: {
-          interior: data.condition.interior,
-          exterior: data.condition.exterior,
-          overall: data.condition.overall,
+          interior: String(data.condition.interior),
+          exterior: String(data.condition.exterior),
+          overall: String(data.condition.overall),
           description: data.condition.description || ""
         },
-        consigned_date: data.is_consigned ? new Date().toISOString().split('T')[0] : undefined,
-        created_by: "admin_user"
+        stock: stockData,
+        cost: data.cost,
+        price: data.price,
+        is_consigned: data.is_consigned,
+        created_by: userExternalId
       };
+
+      // Add consigned fields if applicable
+      if (data.is_consigned) {
+        payload.consignor_ext_id = data.consignor_ext_id;
+        payload.consignor_selling_price = data.consignor_selling_price;
+        payload.consigned_date = data.consigned_date;
+      }
 
       const response = await axios.post(
         "https://lwphsims-uat.up.railway.app/products",

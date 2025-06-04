@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Eye, X } from "lucide-react";
+import { Plus, Eye, X, Upload, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 interface Product {
   stock_external_id: string;
@@ -66,6 +67,11 @@ function formatCurrency(value: string | number) {
   return Number(value).toLocaleString("en-US", { minimumFractionDigits: 2 });
 }
 
+const CLOUDINARY_UPLOAD_PRESET = "lwphsims";
+const CLOUDINARY_CLOUD_NAME = "dsaiym2rw";
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_FILE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
 export default function CreateReceiptPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,6 +100,9 @@ export default function CreateReceiptPage() {
   const [showClientIndicator, setShowClientIndicator] = useState(false);
   const productSectionRef = useRef<HTMLDivElement>(null);
   const [showProductIndicator, setShowProductIndicator] = useState(false);
+  const [proofPendingImages, setProofPendingImages] = useState<File[]>([]);
+  const [proofPreviewUrls, setProofPreviewUrls] = useState<string[]>([]);
+  const [proofUploading, setProofUploading] = useState(false);
 
   // Calculate due date based on base date and number of months
   const calculateDueDate = (baseDate: string, months: number) => {
@@ -243,14 +252,27 @@ export default function CreateReceiptPage() {
       const userData = JSON.parse(localStorage.getItem("userData") || "{}");
       const totalAmount = calculateTotal();
 
+      let proofImageUrls: string[] = [];
+      if (proofPendingImages.length > 0) {
+        try {
+          setProofUploading(true);
+          proofImageUrls = await uploadProofImagesToCloudinary(proofPendingImages);
+          setProofUploading(false);
+        } catch (error) {
+          toast.error("Unable to upload proof of payment images. Please try again.");
+          setProofUploading(false);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       // Only include layaway if type is 'L', and set payment.amount for regular
       const saleData: any = {
         client_ext_id: selectedClient,
         type: isLayaway ? "L" : "R",
         products: selectedProducts.map(product => ({
           product_ext_id: product.stock_external_id,
-          qty: product.qty,
-          images: product.images
+          qty: product.qty
         })),
         is_discounted: isDiscounted,
         discount_percentage: discountType === "percentage" ? discountValue : "0",
@@ -262,6 +284,7 @@ export default function CreateReceiptPage() {
           payment_method: paymentMethod
         },
         created_by: userData.external_id || "",
+        images: proofImageUrls.length > 0 ? proofImageUrls : null,
       };
       if (isLayaway) {
         saleData.layaway = {
@@ -297,6 +320,69 @@ export default function CreateReceiptPage() {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const validateProofFile = (file: File): boolean => {
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      toast.error(`Invalid file type. Allowed types: ${ALLOWED_FILE_TYPES.join(', ')}`);
+      return false;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(`File size exceeds 5MB limit`);
+      return false;
+    }
+    return true;
+  };
+
+  const handleProofImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const validFiles = Array.from(files).filter(validateProofFile);
+    if (validFiles.length === 0) return;
+    const newPreviewUrls = validFiles.map(file => URL.createObjectURL(file));
+    setProofPreviewUrls(prev => [...prev, ...newPreviewUrls]);
+    setProofPendingImages(prev => [...prev, ...validFiles]);
+  };
+
+  const handleProofDragEnd = (result: any) => {
+    if (!result.destination) return;
+    const { source, destination } = result;
+    const newPendingImages = Array.from(proofPendingImages);
+    const newPreviewUrls = Array.from(proofPreviewUrls);
+    const [removedImage] = newPendingImages.splice(source.index, 1);
+    const [removedUrl] = newPreviewUrls.splice(source.index, 1);
+    newPendingImages.splice(destination.index, 0, removedImage);
+    newPreviewUrls.splice(destination.index, 0, removedUrl);
+    setProofPendingImages(newPendingImages);
+    setProofPreviewUrls(newPreviewUrls);
+  };
+
+  const removeProofPendingImage = (index: number) => {
+    setProofPendingImages(prev => prev.filter((_, i) => i !== index));
+    setProofPreviewUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadProofImagesToCloudinary = async (files: File[]): Promise<string[]> => {
+    try {
+      const uploadPromises = files.map(async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+        const response = await axios.post(
+          `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+          formData
+        );
+        if (!response.data.secure_url) {
+          throw new Error('No secure URL returned from Cloudinary');
+        }
+        return response.data.secure_url;
+      });
+      const urls = await Promise.all(uploadPromises);
+      return urls;
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      throw new Error('Failed to upload images');
     }
   };
 
@@ -843,6 +929,75 @@ export default function CreateReceiptPage() {
                   value={datePurchased}
                   onChange={(e) => setDatePurchased(e.target.value)}
                 />
+              </div>
+            </div>
+
+            {/* Proof of Payment Section */}
+          <div className="mb-6">
+              <label className="block mb-2 font-medium">Proof of Payment</label>
+              <DragDropContext onDragEnd={handleProofDragEnd}>
+                <Droppable droppableId="proof-pending" direction="horizontal">
+                  {(provided) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className="flex gap-4 flex-wrap"
+                    >
+                      {proofPreviewUrls.map((url, index) => (
+                        <Draggable key={`proof-pending-${index}`} draggableId={`proof-pending-${index}`} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className={`relative group ${snapshot.isDragging ? 'z-50 shadow-lg' : ''}`}
+                              style={{ ...provided.draggableProps.style, transform: snapshot.isDragging ? provided.draggableProps.style?.transform : 'none' }}
+                            >
+                              <div className="aspect-square w-32 h-32 relative rounded-lg overflow-hidden border">
+                                <img src={url} alt={`Proof image ${index + 1}`} className="object-cover w-full h-full" />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeProofPendingImage(index)}
+                                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                              <div className="absolute bottom-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">Pending</div>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                      {/* Upload Button */}
+                      <label className="aspect-square w-32 h-32 relative rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors cursor-pointer flex items-center justify-center">
+                        <div className="text-center">
+                          <Upload className="h-8 w-8 mx-auto text-gray-400" />
+                          <span className="mt-2 block text-sm text-gray-500">Upload Image</span>
+                          <span className="mt-1 block text-xs text-gray-400">Max 5MB per image</span>
+                        </div>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept={ALLOWED_FILE_TYPES.join(',')}
+                          multiple
+                          onChange={handleProofImageUpload}
+                          disabled={proofUploading}
+                        />
+                      </label>
+          </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
+              {proofUploading && (
+                <div className="text-sm text-gray-500 mt-2">Uploading images...</div>
+              )}
+              {proofPendingImages.length > 0 && (
+                <div className="text-sm text-blue-500 mt-2">{proofPendingImages.length} image(s) ready to upload</div>
+              )}
+              <div className="text-xs text-gray-500 flex items-center gap-1 mt-2">
+                <AlertCircle className="h-3 w-3" />
+                Drag and drop to reorder images
               </div>
             </div>
           </div>

@@ -628,7 +628,6 @@ export default function ItemDetailPage() {
                 <table className="min-w-full text-sm">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-2 text-left font-semibold"><input type="checkbox" disabled /></th>
                       <th className="px-4 py-2 text-left font-semibold">Type</th>
                       <th className="px-4 py-2 text-left font-semibold">Source</th>
                       <th className="px-4 py-2 text-left font-semibold">Qty before</th>
@@ -640,15 +639,14 @@ export default function ItemDetailPage() {
                   </thead>
                   <tbody>
                     {loadingMovements ? (
-                      <tr><td colSpan={8} className="text-center py-6">Loading...</td></tr>
+                      <tr><td colSpan={7} className="text-center py-6">Loading...</td></tr>
                     ) : movementError ? (
-                      <tr><td colSpan={8} className="text-center text-red-500 py-6">{movementError}</td></tr>
+                      <tr><td colSpan={7} className="text-center text-red-500 py-6">{movementError}</td></tr>
                     ) : movements.length === 0 ? (
-                      <tr><td colSpan={8} className="text-center text-gray-500 py-6">No product movement found.</td></tr>
+                      <tr><td colSpan={7} className="text-center text-gray-500 py-6">No product movement found.</td></tr>
                     ) : (
                       movements.map((m, idx) => (
                         <tr key={idx} className="hover:bg-gray-50">
-                          <td className="px-4 py-2"><input type="checkbox" disabled /></td>
                           <td className="px-4 py-2">{m.type || '-'}</td>
                           <td className="px-4 py-2">{m.source || 'Nil'}</td>
                           <td className="px-4 py-2">{m.qty_before ?? '-'}</td>

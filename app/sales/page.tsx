@@ -206,12 +206,12 @@ export default function SalesPage() {
           ))}
         </div>
 
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
           <form className="relative w-full md:w-1/3" onSubmit={handleSearch}>
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search for transactions..."
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search for transactions..."
               className="pl-8 w-full text-sm md:text-base"
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
@@ -258,7 +258,7 @@ export default function SalesPage() {
                               <span className="text-xs text-gray-500 ml-1">+{products.length - 1} more</span>
                             </>
                           )}
-                        </div>
+            </div>
                         <div className="flex flex-wrap gap-2 text-xs mt-2">
                           <span className="font-semibold text-black">₱{Number(sale.total_amount || sale.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                           <span className="text-gray-500">{sale.date_purchased ? new Date(sale.date_purchased).toLocaleDateString() : "-"}</span>
@@ -271,8 +271,8 @@ export default function SalesPage() {
                           }`}>
                             {sale.status || sale.status_text || "-"}
                           </span>
-                        </div>
-                      </div>
+            </div>
+          </div>
                     );
                   })}
                 </div>
@@ -369,7 +369,7 @@ export default function SalesPage() {
                               title="View details"
                             >
                               <Eye strokeWidth={2} />
-                            </Link>
+                </Link>
                           </td>
                         </tr>
                       );
@@ -389,7 +389,7 @@ export default function SalesPage() {
               </div>
             </>
           )}
-        </div>
+            </div>
       </div>
     </div>
   );

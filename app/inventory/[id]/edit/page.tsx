@@ -235,7 +235,7 @@ export default function EditProductPage() {
           setFormData({
             category_ext_id: productData.category.code,
             brand_ext_id: productData.brand.code,
-            auth_ext_id: productData.authenticator.code,
+            auth_ext_id: productData.authenticator ? productData.authenticator.code : "",
             name: productData.name,
             material: productData.material,
             hardware: productData.hardware,
@@ -270,8 +270,8 @@ export default function EditProductPage() {
               name: productData.brand.name
             },
             authenticator: {
-              code: productData.authenticator.code,
-              name: productData.authenticator.name
+              code: productData.authenticator ? productData.authenticator.code : "",
+              name: productData.authenticator ? productData.authenticator.name : ""
             },
             condition: {
               interior: productData.condition?.interior,
@@ -327,6 +327,24 @@ export default function EditProductPage() {
           !formData.measurement || !formData.model || !formData.cost || !formData.price ||
           !formData.category_ext_id || !formData.brand_ext_id || !formData.auth_ext_id) {
         toast.error("Please fill in all required fields");
+        setIsSaving(false);
+        return;
+      }
+
+      // Additional validation for consigned products
+      if (formData.is_consigned) {
+        if (!formData.consignor_ext_id || !formData.consignor_selling_price || !formData.consigned_date) {
+          toast.error("For consigned products, Consignor, Consignor Selling Price, and Consigned Date are required.");
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      // Get logged-in user's external ID
+      const userExternalId = typeof window !== 'undefined' ? localStorage.getItem("user_external_id") : null;
+      if (!userExternalId) {
+        toast.error("User ID not found. Please log in again.");
+        setIsSaving(false);
         return;
       }
 
@@ -346,19 +364,19 @@ export default function EditProductPage() {
       }
 
       // Prepare the request data according to API format
-      const requestData = {
+      const requestData: any = {
         // Basic Information
-        name: formData.name,
-        code: formData.code,
-        material: formData.material,
-        hardware: formData.hardware,
-        measurement: formData.measurement,
-        model: formData.model,
+        name: formData.name || "",
+        code: formData.code || "",
+        material: formData.material || "",
+        hardware: formData.hardware || "",
+        measurement: formData.measurement || "",
+        model: formData.model || "",
 
         // Category, Brand, and Authenticator IDs
         category_ext_id: formData.category_ext_id,
         brand_ext_id: formData.brand_ext_id,
-        auth_ext_id: formData.auth_ext_id,
+        auth_ext_id: formData.auth_ext_id || "",
 
         // Inclusions and Images
         inclusion: formData.inclusion,
@@ -366,9 +384,9 @@ export default function EditProductPage() {
 
         // Condition
         condition: {
-          interior: "10",
-          exterior: "10",
-          overall: "100",
+          interior: String(formData.condition.interior),
+          exterior: String(formData.condition.exterior),
+          overall: String(formData.condition.overall),
           description: formData.condition.description || ""
         },
 
@@ -378,19 +396,24 @@ export default function EditProductPage() {
 
         // Consignment Information
         is_consigned: formData.is_consigned,
-        consignor_ext_id: formData.is_consigned ? formData.consignor_ext_id : undefined,
-        consignor_selling_price: formData.is_consigned ? Number(formData.consignor_selling_price) : undefined,
-        consigned_date: formData.is_consigned ? formData.consigned_date : undefined,
-
-        // System Fields
-        updated_by: "admin_user" // This should be replaced with actual logged-in user's ID
+        updated_by: userExternalId
       };
+
+      // Add consigned fields if applicable
+      if (formData.is_consigned) {
+        requestData.consignor_ext_id = formData.consignor_ext_id;
+        requestData.consignor_selling_price = Number(formData.consignor_selling_price);
+        requestData.consigned_date = formData.consigned_date;
+      }
+
+      // Use stock_external_id for the endpoint
+      const stockExternalId = product?.stock_external_id || id;
 
       console.log('Submitting data:', requestData);
 
       try {
         const response = await axios.put(
-          `https://lwphsims-uat.up.railway.app/products/id/${id}`,
+          `https://lwphsims-uat.up.railway.app/products/id/${stockExternalId}`,
           requestData,
           {
             headers: {
@@ -832,9 +855,8 @@ export default function EditProductPage() {
                 <Input
                   id="name"
                   name="name"
-                  value={formData.name}
+                  value={formData.name || ""}
                   onChange={handleInputChange}
-                  required
                 />
               </div>
               <div className="space-y-2">
@@ -842,9 +864,8 @@ export default function EditProductPage() {
                 <Input
                   id="code"
                   name="code"
-                  value={formData.code}
+                  value={formData.code || ""}
                   onChange={handleInputChange}
-                  required
                 />
               </div>
               <div className="space-y-2">
@@ -852,9 +873,8 @@ export default function EditProductPage() {
                 <Input
                   id="material"
                   name="material"
-                  value={formData.material}
+                  value={formData.material || ""}
                   onChange={handleInputChange}
-                  required
                 />
               </div>
               <div className="space-y-2">
@@ -862,9 +882,8 @@ export default function EditProductPage() {
                 <Input
                   id="hardware"
                   name="hardware"
-                  value={formData.hardware}
+                  value={formData.hardware || ""}
                   onChange={handleInputChange}
-                  required
                 />
               </div>
               <div className="space-y-2">
@@ -872,9 +891,8 @@ export default function EditProductPage() {
                 <Input
                   id="measurement"
                   name="measurement"
-                  value={formData.measurement}
+                  value={formData.measurement || ""}
                   onChange={handleInputChange}
-                  required
                 />
               </div>
               <div className="space-y-2">
@@ -882,9 +900,8 @@ export default function EditProductPage() {
                 <Input
                   id="model"
                   name="model"
-                  value={formData.model}
+                  value={formData.model || ""}
                   onChange={handleInputChange}
-                  required
                 />
               </div>
             </div>
@@ -899,7 +916,7 @@ export default function EditProductPage() {
                 <Input
                   id="cost"
                   name="cost"
-                  value={costDisplay}
+                  value={costDisplay || ""}
                   onChange={handleCostChange}
                   placeholder="0.00"
                   required
@@ -910,7 +927,7 @@ export default function EditProductPage() {
                 <Input
                   id="price"
                   name="price"
-                  value={priceDisplay}
+                  value={priceDisplay || ""}
                   onChange={handlePriceChange}
                   placeholder="0.00"
                   required
@@ -931,7 +948,7 @@ export default function EditProductPage() {
                     type="number"
                     min="1"
                     max="10"
-                    value={formData.condition.interior}
+                    value={formData.condition.interior || ""}
                     onChange={(e) => {
                       const value = e.target.value;
                       if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
@@ -952,7 +969,7 @@ export default function EditProductPage() {
                     type="number"
                     min="1"
                     max="10"
-                    value={formData.condition.exterior}
+                    value={formData.condition.exterior || ""}
                     onChange={(e) => {
                       const value = e.target.value;
                       if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
@@ -973,7 +990,7 @@ export default function EditProductPage() {
                     type="number"
                     min="0"
                     max="100"
-                    value={formData.condition.overall}
+                    value={formData.condition.overall || ""}
                     onChange={e => {
                       const value = e.target.value;
                       if (value === '' || (Number(value) >= 0 && Number(value) <= 100)) {
@@ -1043,7 +1060,7 @@ export default function EditProductPage() {
                   <Input
                     id="consignor_selling_price"
                     name="consignor_selling_price"
-                    value={consignorPriceDisplay}
+                    value={consignorPriceDisplay || ""}
                     onChange={handleConsignorPriceChange}
                     placeholder="0.00"
                     required
@@ -1055,7 +1072,7 @@ export default function EditProductPage() {
                     id="consigned_date"
                     name="consigned_date"
                     type="date"
-                    value={formData.consigned_date}
+                    value={formData.consigned_date || ""}
                     onChange={handleInputChange}
                     required
                   />
