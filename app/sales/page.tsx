@@ -54,9 +54,12 @@ export default function SalesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const displayPerPage = 10;
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [dateError, setDateError] = useState("");
 
   // Fetch counts for all tabs
-  const fetchTabCounts = async (search: string) => {
+  const fetchTabCounts = async (search: string, from?: string, to?: string) => {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
@@ -66,11 +69,13 @@ export default function SalesPage() {
           let endpoint = `${API_BASE}${tab.endpoint}`;
           let params: any = {
             pageNumber: 1,
-            displayPerPage: 1, // Only need meta, not data
+            displayPerPage: 1,
             sortBy: tab.value === "paid" ? "date_purchased" : "created_at",
             orderBy: "desc"
           };
           if (search) params.searchValue = search;
+          if (from) params.dateFrom = from;
+          if (to) params.dateTo = to;
           const response = await axios.get(endpoint, {
             headers: { Authorization: `Bearer ${token}` },
             params
@@ -90,7 +95,7 @@ export default function SalesPage() {
     }
   };
 
-  const fetchSales = async (tabValue: string, search: string, page = 1) => {
+  const fetchSales = async (tabValue: string, search: string, page = 1, from?: string, to?: string) => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -104,6 +109,8 @@ export default function SalesPage() {
         orderBy: "desc"
       };
       if (search) params.searchValue = search;
+      if (from) params.dateFrom = from;
+      if (to) params.dateTo = to;
       const response = await axios.get(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
         params
@@ -121,17 +128,17 @@ export default function SalesPage() {
   };
 
   useEffect(() => {
-    fetchTabCounts(searchValue);
-  }, [searchValue]);
+    if (!dateError) fetchTabCounts(searchValue, dateFrom, dateTo);
+  }, [searchValue, dateFrom, dateTo, dateError]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, searchValue]);
+  }, [activeTab, searchValue, dateFrom, dateTo]);
 
   useEffect(() => {
-    fetchSales(activeTab, searchValue, currentPage);
+    if (!dateError) fetchSales(activeTab, searchValue, currentPage, dateFrom, dateTo);
     // eslint-disable-next-line
-  }, [activeTab, searchValue, currentPage]);
+  }, [activeTab, searchValue, currentPage, dateFrom, dateTo, dateError]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,17 +213,60 @@ export default function SalesPage() {
           ))}
         </div>
 
-          <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
           <form className="relative w-full md:w-1/3" onSubmit={handleSearch}>
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search for transactions..."
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search for transactions..."
               className="pl-8 w-full text-sm md:text-base"
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
             />
           </form>
+          <div className="flex flex-col items-start">
+            <span className="text-sm text-muted-foreground mb-1">Filter by date</span>
+            <div className="flex gap-1 items-center">
+              <label className="text-sm font-medium">From</label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={e => {
+                  setDateFrom(e.target.value);
+                  if (dateTo && e.target.value && dateTo < e.target.value) {
+                    setDateError('End date cannot be earlier than start date.');
+                  } else {
+                    setDateError("");
+                  }
+                }}
+                className="w-[160px]"
+                max={dateTo || undefined}
+              />
+              {dateError && (
+                <span className="text-xs text-red-500 ml-2">{dateError}</span>
+              )}
+              <label className="text-sm font-medium ml-1">To</label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={e => {
+                  setDateTo(e.target.value);
+                  if (dateFrom && e.target.value && e.target.value < dateFrom) {
+                    setDateError('End date cannot be earlier than start date.');
+                  } else {
+                    setDateError("");
+                  }
+                }}
+                className="w-[160px]"
+                min={dateFrom || undefined}
+              />
+              {(dateFrom || dateTo) && (
+                <Button variant="ghost" size="sm" onClick={() => { setDateFrom(""); setDateTo(""); }}>
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="overflow-x-auto">

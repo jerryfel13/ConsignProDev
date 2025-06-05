@@ -248,35 +248,38 @@ export default function TransactionDetailPage({
     if (!sale) return;
     setIsDownloading(true);
     try {
-      let user = null;
-      if (typeof window !== "undefined") {
-        const userData = localStorage.getItem("userData");
-        if (userData) {
-          try {
-            user = JSON.parse(userData);
-          } catch {
-            user = null;
-          }
-        }
-      }
       const doc = new jsPDF();
+      doc.setFont("helvetica");
       const logoUrl = "/lwlogo.jpg";
       const img = new window.Image();
       img.crossOrigin = "Anonymous";
       img.src = logoUrl;
       img.onload = function () {
-        doc.addImage(img, "PNG", 14, 8, 30, 12);
+        // Auto-size logo
+        const maxWidth = 40;
+        const maxHeight = 20;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = (maxWidth / width) * height;
+          width = maxWidth;
+        }
+        if (height > maxHeight) {
+          width = (maxHeight / height) * width;
+          height = maxHeight;
+        }
+        doc.addImage(img, "PNG", 14, 8, width, height);
+        // Centered title below logo
+        const titleY = 8 + height + 8;
         doc.setFontSize(16);
-        doc.text("Transaction Receipt", 50, 16);
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const title = "Transaction Receipt";
+        const textWidth = doc.getTextWidth(title);
+        doc.text(title, (pageWidth - textWidth) / 2, titleY);
         doc.setFontSize(10);
-        doc.text(
-          `Downloaded by: ${user?.first_name || ""} ${user?.last_name || ""} (${user?.email || "Unknown User"})`,
-          14,
-          28
-        );
         // Transaction Info Table
         autoTable(doc, {
-          startY: 34,
+          startY: titleY + 6,
           head: [["Field", "Value"]],
           body: [
             ["Reference #", sale.sale_external_id],
@@ -285,6 +288,7 @@ export default function TransactionDetailPage({
             ["Status", sale.status],
             ["Customer", sale.Customer?.name || "-"],
           ],
+          styles: { font: "helvetica" },
         });
         // Items Table
         autoTable(doc, {
@@ -293,9 +297,10 @@ export default function TransactionDetailPage({
           body: sale.product.map((item: any) => [
             item.name,
             item.qty,
-            `₱${Number(item.unit_price).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
-            `₱${Number(item.subtotal).toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+            `PHP ${Number(item.unit_price).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+            `PHP ${Number(item.subtotal).toLocaleString("en-US", { minimumFractionDigits: 2 })}`
           ]),
+          styles: { font: "helvetica" },
         });
         // Payment History Table
         let lastY = doc.lastAutoTable.finalY;
@@ -304,17 +309,18 @@ export default function TransactionDetailPage({
             startY: doc.lastAutoTable.finalY + 6,
             head: [["Amount", "Date", "Method"]],
             body: sale.payment_history.map((ph: any) => [
-              `₱${Number(ph.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+              `PHP ${Number(ph.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
               ph.payment_date ? new Date(ph.payment_date).toLocaleDateString() : "-",
               ph.payment_method
             ]),
+            styles: { font: "helvetica" },
           });
           lastY = doc.lastAutoTable.finalY;
         }
         // Summary
         doc.setFontSize(12);
         doc.text(
-          `Total: ₱${Number(sale.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+          `Total: PHP ${Number(sale.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
           14,
           lastY + 12
         );
@@ -322,14 +328,14 @@ export default function TransactionDetailPage({
           doc.text(
             sale.discount_percent !== "0.00"
               ? `Discount: ${sale.discount_percent}%`
-              : `Discount: ₱${Number(sale.discount_flat_rate).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+              : `Discount: PHP ${Number(sale.discount_flat_rate).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
             14,
             lastY + 18
           );
         }
         if (sale.layaway_plan) {
           doc.text(
-            `Outstanding Balance: ₱${Number(sale.outstanding_balance).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+            `Outstanding Balance: PHP ${Number(sale.outstanding_balance).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
             14,
             lastY + 24
           );
@@ -360,7 +366,7 @@ export default function TransactionDetailPage({
           <tbody>
             <tr>
               <td style="font-weight:700;font-size:14px;padding:2px 0;">Item</td>
-              <td style="text-align:right;font-size:14px;font-weight:600;padding:2px 0;">₱${sale?.product?.[0]?.unit_price ? Number(sale.product[0].unit_price).toLocaleString('en-US', { minimumFractionDigits: 0 }) : ''}</td>
+              <td style="text-align:right;font-size:14px;font-weight:600;padding:2px 0;">PHP ${sale?.product?.[0]?.unit_price ? Number(sale.product[0].unit_price).toLocaleString('en-US', { minimumFractionDigits: 0 }) : ''}</td>
             </tr>
             <tr>
               <td style="font-weight:700;font-size:14px;padding:2px 0;">Code</td>
@@ -375,11 +381,11 @@ export default function TransactionDetailPage({
         <div style="border-top:1.5px solid #222;margin:10px 0 8px 0;"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
           <div style="font-size:16px;font-weight:700;color:#222;">Total:</div>
-          <div style="font-size:18px;font-weight:700;color:#222;">₱${sale?.total_amount ? Number(sale.total_amount).toLocaleString('en-US', { minimumFractionDigits: 0 }) : ''}</div>
+          <div style="font-size:18px;font-weight:700;color:#222;">PHP ${sale?.total_amount ? Number(sale.total_amount).toLocaleString('en-US', { minimumFractionDigits: 0 }) : ''}</div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div style="font-size:14px;font-weight:600;color:#444;">Cash:</div>
-          <div style="font-size:15px;font-weight:600;color:#444;">₱${sale?.total_amount ? Number(sale.total_amount).toLocaleString('en-US', { minimumFractionDigits: 0 }) : ''}</div>
+          <div style="font-size:15px;font-weight:600;color:#444;">PHP ${sale?.total_amount ? Number(sale.total_amount).toLocaleString('en-US', { minimumFractionDigits: 0 }) : ''}</div>
         </div>
         <div style="border-top:2px solid #222;margin:14px 0 10px 0;"></div>
         <div style="text-align:center;font-size:13px;color:#222;font-weight:600;line-height:1.4;margin-bottom:2px;">No Return/ No Exchange Policy</div>
@@ -688,7 +694,7 @@ export default function TransactionDetailPage({
                         </h3>
                         <p className="font-medium">
                             Months: {sale.layaway_plan.no_of_months} <br />
-                            Amount Due: ₱{Number(sale.layaway_plan.amount_due).toLocaleString("en-US", { minimumFractionDigits: 2 })} <br />
+                            Amount Due: PHP {Number(sale.layaway_plan.amount_due).toLocaleString("en-US", { minimumFractionDigits: 2 })} <br />
                             Due Date: {new Date(sale.layaway_plan.current_due_date).toLocaleDateString()} <br />
                             Status: {sale.layaway_plan.status}
                         </p>
@@ -738,10 +744,10 @@ export default function TransactionDetailPage({
                                   {item.qty}
                                 </td>
                                 <td className="py-4 px-4 text-right">
-                                  ₱{Number(item.unit_price).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                   PHP {Number(item.unit_price).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                               </td>
                               <td className="py-4 px-4 text-right">
-                                  ₱{Number(item.subtotal).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                   PHP {Number(item.subtotal).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                               </td>
                             </tr>
                           ))}
@@ -751,10 +757,29 @@ export default function TransactionDetailPage({
                     </div>
                   </CardContent>
                   <CardFooter className="flex justify-between border-t p-4 bg-gray-50">
-                    <span className="font-bold">Total:</span>
-                    <span className="font-bold">
-                      ₱{Number(sale.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                    </span>
+                    {sale.is_discounted ? (
+                      <>
+                        <div className="flex flex-col">
+                          <span className="font-bold">Total Price:</span>
+                          <span className="font-bold text-green-700 mt-1">Total Discounted Price:</span>
+                        </div>
+                        <div className="flex flex-col text-right">
+                          <span className="font-bold line-through text-gray-500">
+                            PHP {sale.product.reduce((sum: number, item: any) => sum + Number(item.subtotal), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                          </span>
+                          <span className="font-bold text-green-700 mt-1">
+                            PHP {Number(sale.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-bold">Total:</span>
+                        <span className="font-bold">
+                          PHP {Number(sale.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        </span>
+                      </>
+                    )}
                   </CardFooter>
                 </Card>
                 {/* Payment History */}
@@ -787,7 +812,7 @@ export default function TransactionDetailPage({
                               {sale.payment_history.map((ph: any) => (
                                 <tr key={ph.external_id} className="border-b hover:bg-gray-50 transition-colors">
                                   <td className="py-4 px-4 font-medium">
-                                    ₱{Number(ph.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                     PHP {Number(ph.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                                   </td>
                                   <td className="py-4 px-4">
                                     {ph.payment_date ? new Date(ph.payment_date).toLocaleDateString() : "-"}
@@ -818,7 +843,7 @@ export default function TransactionDetailPage({
                       Total Amount
                     </p>
                     <p className="text-2xl md:text-3xl font-bold mb-4 text-blue-700">
-                      ₱{Number(sale.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                       PHP {Number(sale.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     </p>
                     <div className="w-full flex flex-col gap-3 mt-2">
                       <Button
@@ -849,7 +874,7 @@ export default function TransactionDetailPage({
                       <div>
                         {sale.discount_percent !== "0.00"
                           ? `Discount: ${sale.discount_percent}%`
-                          : `Discount: ₱${Number(sale.discount_flat_rate).toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
+                          : `Discount: PHP ${Number(sale.discount_flat_rate).toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
                       </div>
                     </CardContent>
                   </Card>
@@ -866,7 +891,7 @@ export default function TransactionDetailPage({
                     <CardContent className="p-4">
                       <div className="space-y-2">
                         <div>Months: {sale.layaway_plan.no_of_months}</div>
-                        <div>Amount Due: ₱{Number(sale.layaway_plan.amount_due).toLocaleString("en-US", { minimumFractionDigits: 2 })}</div>
+                        <div>Amount Due: PHP {Number(sale.layaway_plan.amount_due).toLocaleString("en-US", { minimumFractionDigits: 2 })}</div>
                         <div>Due Date: {new Date(sale.layaway_plan.current_due_date).toLocaleDateString()}</div>
                         <div>Status: {sale.layaway_plan.status}</div>
                       </div>
@@ -878,7 +903,7 @@ export default function TransactionDetailPage({
                     <CardHeader className="bg-gray-50 pb-3 border-b">
                       <CardTitle className="flex items-center">
                         <FileText className="h-5 w-5 mr-2" />
-                        Proof of Payment
+                        Proof of Purchase
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-4">
@@ -889,7 +914,7 @@ export default function TransactionDetailPage({
                             className="aspect-square rounded-lg overflow-hidden border cursor-pointer hover:ring-2 hover:ring-blue-400 transition"
                             onClick={() => setSelectedProofImage(img)}
                           >
-                            <Image src={img} alt={`Proof of payment ${idx + 1}`} width={100} height={100} className="object-cover w-full h-full" />
+                            <Image src={img} alt={`Proof of Purchase ${idx + 1}`} width={100} height={100} className="object-cover w-full h-full" />
                           </div>
                         ))}
                       </div>

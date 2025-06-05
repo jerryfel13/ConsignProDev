@@ -267,7 +267,7 @@ export default function CreateReceiptPage() {
           proofImageUrls = await uploadProofImagesToCloudinary(proofPendingImages);
           setProofUploading(false);
         } catch (error) {
-          toast.error("Unable to upload proof of payment images. Please try again.");
+          toast.error("Unable to upload proof of purchase images. Please try again.");
           setProofUploading(false);
           setIsSubmitting(false);
           return;
@@ -946,9 +946,9 @@ export default function CreateReceiptPage() {
               </div>
             </div>
 
-            {/* Proof of Payment Section */}
+            {/* Proof of Purchase Section */}
           <div className="mb-6">
-              <label className="block mb-2 font-medium">Proof of Payment</label>
+              <label className="block mb-2 font-medium">Proof of Purchase</label>
               <DragDropContext onDragEnd={handleProofDragEnd}>
                 <Droppable droppableId="proof-pending" direction="horizontal">
                   {(provided) => (
