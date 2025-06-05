@@ -415,7 +415,7 @@ export default function ClientDetailPage({
   ];
 
   return (
-    <div className="container p-0 md:py-4 md:px-4 max-w-6xl mx-auto">
+    <div className="w-full max-w-6xl mx-auto px-2 sm:px-4 md:py-4">
       <Toaster />
       {showDeleteBackdrop && (
         <>
@@ -515,9 +515,9 @@ export default function ClientDetailPage({
         </>
       )}
       {/* Header Card */}
-      <Card className="mb-6 border-0 md:border md:shadow-sm">
+      <Card className="mb-6 border-0 md:border md:shadow-sm w-full">
         <CardHeader className="pb-2 md:pb-4">
-          <div className="flex items-start md:items-center justify-between">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 w-full">
             <div className="flex items-center md:gap-4">
               <Button
                 variant="ghost"
@@ -540,7 +540,7 @@ export default function ClientDetailPage({
                   Back to Clients
                 </Link>
               </Button>
-              <div className="flex flex-col items-center md:items-start">
+              <div className="flex flex-col items-center md:items-start w-full">
                 <div className="flex flex-col md:flex-row md:items-center md:gap-2">
                   <h1 className="text-2xl font-bold text-center md:text-left">
                     {getField('first_name', 'No First Name')} {getField('last_name', 'No Last Name')}
@@ -604,7 +604,7 @@ export default function ClientDetailPage({
 
         <TabsContent value="details" className="mt-0 space-y-6">
           {/* Contact Information Card */}
-          <Card className="shadow-sm">
+          <Card className="shadow-sm w-full">
             <CardHeader className="pb-3">
               <div className="flex items-center">
                 <User className="h-5 w-5 mr-2 text-primary" />
@@ -613,7 +613,7 @@ export default function ClientDetailPage({
               <CardDescription>Personal and contact details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground">
                     First Name
@@ -701,7 +701,7 @@ export default function ClientDetailPage({
 
           {/* Bank Details Card if Consignor */}
           {getField('is_consignor') && getField('bank') && (
-            <Card className="shadow-sm">
+            <Card className="shadow-sm w-full">
               <CardHeader className="pb-3">
                 <div className="flex items-center">
                   <Tag className="h-5 w-5 mr-2 text-primary" />
@@ -739,7 +739,7 @@ export default function ClientDetailPage({
           )}
 
           {/* Additional Information Card */}
-          <Card className="shadow-sm">
+          <Card className="shadow-sm w-full">
             <CardHeader className="pb-3">
               <div className="flex items-center">
                 <Calendar className="h-5 w-5 mr-2 text-primary" />
@@ -748,7 +748,7 @@ export default function ClientDetailPage({
               <CardDescription>System and metadata</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="p-3 rounded bg-muted/50">
                   <h3 className="text-sm font-medium text-muted-foreground">
                     Created At
@@ -779,7 +779,7 @@ export default function ClientDetailPage({
         {/* Items Tab (only for Consignors) */}
         {getField('is_consignor') && (
           <TabsContent value="items" className="mt-0">
-            <Card className="shadow-sm">
+            <Card className="shadow-sm w-full">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
@@ -808,7 +808,7 @@ export default function ClientDetailPage({
                     {consignmentsError}
                   </div>
                 ) : clientConsignments.length > 0 ? (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto w-full">
                     <table className="w-full">
                       <thead>
                         <tr className="border-b bg-gray-50">
@@ -883,7 +883,7 @@ export default function ClientDetailPage({
         )}
 
         <TabsContent value="transactions" className="mt-0">
-          <Card className="shadow-sm">
+          <Card className="shadow-sm w-full">
             <CardHeader className="pb-3">
               <div className="flex items-center">
                 <Calendar className="h-5 w-5 mr-2 text-primary" />
@@ -894,7 +894,7 @@ export default function ClientDetailPage({
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto w-full">
                 {loadingTransactions ? (
                   <div className="text-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2 mx-auto"></div>

@@ -687,6 +687,26 @@ export default function TransactionDetailPage({
                           {sale.Customer?.name}
                         </p>
                       </div>
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-medium text-muted-foreground">Who created</h3>
+                        <p className="font-medium">{sale.created_by || '-'}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-medium text-muted-foreground">When created</h3>
+                        <p className="font-medium">{sale.created_at ? new Date(sale.created_at).toLocaleString() : '-'}</p>
+                      </div>
+                      {sale.status === 'Cancelled' && (
+                        <>
+                          <div className="space-y-1">
+                            <h3 className="text-sm font-medium text-red-600">Cancelled at</h3>
+                            <p className="font-medium text-red-700">{sale.cancelled_at ? new Date(sale.cancelled_at).toLocaleString() : '-'}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <h3 className="text-sm font-medium text-red-600">Cancelled by</h3>
+                            <p className="font-medium text-red-700">{sale.cancelled_by || '-'}</p>
+                          </div>
+                        </>
+                      )}
                       {sale.layaway_plan && (
                       <div className="md:col-span-2 space-y-1">
                         <h3 className="text-sm font-medium text-muted-foreground">

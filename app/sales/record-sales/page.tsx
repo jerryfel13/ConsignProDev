@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
@@ -72,7 +72,7 @@ const CLOUDINARY_CLOUD_NAME = "dsaiym2rw";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-export default function CreateReceiptPage() {
+function RecordSalesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const clientId = searchParams?.get('clientId') || "";
@@ -152,7 +152,12 @@ export default function CreateReceiptPage() {
         });
 
         if (clientsResponse.data.status?.success) {
-          const clientsData = clientsResponse.data.data.map((c: Client) => ({
+          const clientsData = clientsResponse.data.data.map((c: { 
+            external_id: string;
+            first_name: string;
+            last_name: string;
+            is_consignor: boolean;
+          }) => ({
             external_id: c.external_id,
             first_name: c.first_name,
             last_name: c.last_name,
@@ -1055,5 +1060,13 @@ export default function CreateReceiptPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CreateReceiptPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <RecordSalesContent />
+    </Suspense>
   );
 }

@@ -154,8 +154,8 @@ export default function SalesPage() {
   };
 
   return (
-    <div>
-      <div className="container mx-auto p-4 md:p-6 lg:p-8">
+    <div className="w-full">
+      <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 py-4 md:p-6 lg:p-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <h1 className="text-2xl font-semibold">Sales Transactions</h1>
           <div className="flex gap-2">
@@ -195,12 +195,12 @@ export default function SalesPage() {
           )}
         </div>
 
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 mb-6">
+        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 mb-4 w-full">
           {TABS.map(tab => (
             <div
               key={tab.value}
               onClick={() => setActiveTab(tab.value)}
-              className={`relative cursor-pointer transition-shadow rounded-xl border flex flex-col justify-between bg-white shadow-sm select-none p-6 min-h-[110px]
+              className={`relative cursor-pointer transition-shadow rounded-xl border flex flex-col justify-between bg-white shadow-sm select-none p-4 min-h-[90px] sm:p-6 sm:min-h-[110px]
                 ${activeTab === tab.value ? 'ring-2 ring-blue-500 border-blue-500' : 'hover:shadow-md border-slate-200'}`}
               style={{ minWidth: 0 }}
             >
@@ -213,8 +213,8 @@ export default function SalesPage() {
           ))}
         </div>
 
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-          <form className="relative w-full md:w-1/3" onSubmit={handleSearch}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center mb-4 w-full">
+          <form className="relative w-full" onSubmit={handleSearch}>
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -224,9 +224,9 @@ export default function SalesPage() {
               onChange={e => setSearchInput(e.target.value)}
             />
           </form>
-          <div className="flex flex-col items-start">
-            <span className="text-sm text-muted-foreground mb-1">Filter by date</span>
-            <div className="flex gap-1 items-center">
+          <div className="flex flex-col gap-1 w-full sm:flex-row sm:items-center sm:w-auto sm:gap-2 mt-2 sm:mt-0">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Filter by date</span>
+            <div className="flex flex-col sm:flex-row gap-1 items-start sm:items-center w-full sm:w-auto">
               <label className="text-sm font-medium">From</label>
               <Input
                 type="date"
@@ -239,13 +239,13 @@ export default function SalesPage() {
                     setDateError("");
                   }
                 }}
-                className="w-[160px]"
+                className="w-full max-w-[180px]"
                 max={dateTo || undefined}
               />
               {dateError && (
                 <span className="text-xs text-red-500 ml-2">{dateError}</span>
               )}
-              <label className="text-sm font-medium ml-1">To</label>
+              <label className="text-sm font-medium sm:ml-1">To</label>
               <Input
                 type="date"
                 value={dateTo}
@@ -257,7 +257,7 @@ export default function SalesPage() {
                     setDateError("");
                   }
                 }}
-                className="w-[160px]"
+                className="w-full max-w-[180px]"
                 min={dateFrom || undefined}
               />
               {(dateFrom || dateTo) && (
@@ -277,58 +277,85 @@ export default function SalesPage() {
           ) : (
             <>
               {/* Mobile Card View */}
-              <div className="block md:hidden">
-                <div className="flex flex-col gap-4">
+              <div className="block md:hidden w-full">
+                <div className="flex flex-col gap-2 w-full">
                   {sales.map((sale: any, idx: number) => {
                     const products = sale.product || sale.products || [];
                     return (
-                      <div key={sale.external_id || sale.id || idx} className="rounded-lg border bg-white shadow p-4 flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-base text-black">{sale.Customer?.name || sale.customer_name || "-"}</span>
-                          <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                            sale.type?.code === 'L' || sale.type === 'Layaway' ? 'bg-blue-100 text-blue-700' :
-                            sale.type?.code === 'R' || sale.type === 'Regular' ? 'bg-green-100 text-green-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {sale.type?.description || sale.type || "-"}
-                          </span>
+                      <div key={sale.external_id || sale.id || idx} className="rounded-lg border bg-white shadow p-3 flex flex-col gap-2 w-full">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-muted-foreground font-medium">Customer</span>
+                            <span className="text-xs text-muted-foreground font-medium">Type</span>
+                          </div>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-semibold text-base text-black truncate max-w-[60%]">{sale.Customer?.name || sale.customer_name || "-"}</span>
+                            <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                              sale.type?.code === 'L' || sale.type === 'Layaway' ? 'bg-blue-100 text-blue-700' :
+                              sale.type?.code === 'R' || sale.type === 'Regular' ? 'bg-green-100 text-green-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {sale.type?.description || sale.type || "-"}
+                            </span>
+                          </div>
+                          <hr className="my-1" />
+                          <span className="text-xs text-muted-foreground font-medium">Products</span>
+                          <div className="flex items-center gap-2 text-sm mb-1">
+                            {products.length === 1 && (
+                              <>
+                                <span className="inline-block w-6 h-6 bg-slate-200 rounded-md flex items-center justify-center text-lg">👜</span>
+                                <span className="truncate font-medium">{products[0].name}</span>
+                                <span className="text-xs text-gray-500 ml-1">x{products[0].qty}</span>
+                              </>
+                            )}
+                            {products.length > 1 && (
+                              <>
+                                <span className="inline-block w-6 h-6 bg-slate-200 rounded-md flex items-center justify-center text-lg">👜</span>
+                                <span className="truncate font-medium">{products[0].name}</span>
+                                <span className="text-xs text-gray-500 ml-1">+{products.length - 1} more</span>
+                              </>
+                            )}
+                          </div>
+                          <hr className="my-1" />
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-muted-foreground font-medium">Total</span>
+                            <span className="text-xs text-muted-foreground font-medium">Date</span>
+                          </div>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-semibold text-black">₱{Number(sale.total_amount || sale.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                            <span className="text-gray-500">{sale.date_purchased ? new Date(sale.date_purchased).toLocaleDateString() : "-"}</span>
+                          </div>
+                          <hr className="my-1" />
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-muted-foreground font-medium">Status</span>
+                            <span className="text-xs text-muted-foreground font-medium">Action</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                              sale.status?.toLowerCase() === 'paid' ? 'bg-green-100 text-green-700' :
+                              sale.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-700' :
+                              sale.status?.toLowerCase() === 'overdue' ? 'bg-orange-100 text-orange-700' :
+                              sale.status?.toLowerCase() === 'deposit' ? 'bg-blue-100 text-blue-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {sale.status || sale.status_text || "-"}
+                            </span>
+                            <Link
+                              href={`/clients/${sale.Customer?.external_id}/transactions/${sale.sale_external_id}`}
+                              className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-blue-100"
+                              title="View details"
+                            >
+                              <Eye strokeWidth={2} />
+                            </Link>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          {products.length === 1 && (
-                            <>
-                              <span className="inline-block w-6 h-6 bg-slate-200 rounded-md flex items-center justify-center text-lg">👜</span>
-                              <span className="truncate font-medium">{products[0].name}</span>
-                              <span className="text-xs text-gray-500 ml-1">x{products[0].qty}</span>
-                            </>
-                          )}
-                          {products.length > 1 && (
-                            <>
-                              <span className="inline-block w-6 h-6 bg-slate-200 rounded-md flex items-center justify-center text-lg">👜</span>
-                              <span className="truncate font-medium">{products[0].name}</span>
-                              <span className="text-xs text-gray-500 ml-1">+{products.length - 1} more</span>
-                            </>
-                          )}
-            </div>
-                        <div className="flex flex-wrap gap-2 text-xs mt-2">
-                          <span className="font-semibold text-black">₱{Number(sale.total_amount || sale.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                          <span className="text-gray-500">{sale.date_purchased ? new Date(sale.date_purchased).toLocaleDateString() : "-"}</span>
-                          <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                            sale.status?.toLowerCase() === 'paid' ? 'bg-green-100 text-green-700' :
-                            sale.status?.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-700' :
-                            sale.status?.toLowerCase() === 'overdue' ? 'bg-orange-100 text-orange-700' :
-                            sale.status?.toLowerCase() === 'deposit' ? 'bg-blue-100 text-blue-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {sale.status || sale.status_text || "-"}
-                          </span>
-            </div>
-          </div>
+                      </div>
                     );
                   })}
                 </div>
               </div>
               {/* Desktop Table View */}
-              <div className="hidden md:block">
+              <div className="hidden md:block overflow-x-auto w-full">
                 <table className="min-w-full border-separate border-spacing-0 rounded-xl shadow bg-white text-sm md:text-base">
                   <thead>
                     <tr className="bg-slate-100 text-left">
@@ -439,7 +466,7 @@ export default function SalesPage() {
               </div>
             </>
           )}
-            </div>
+        </div>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer, toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
+import api, { isTokenExpired, handleSessionExpiration } from '@/lib/api';
 
 // Mock user data - replace with actual authentication implementation
 interface UserData {
@@ -48,6 +48,12 @@ export function useAuth() {
       return;
     }
 
+    // Check if token is expired
+    if (isTokenExpired(token)) {
+      handleSessionExpiration();
+      return;
+    }
+
     try {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
@@ -57,7 +63,7 @@ export function useAuth() {
       }
     } catch (error) {
       console.error("Error parsing user data:", error);
-      router.push("/auth/login");
+      handleSessionExpiration();
     } finally {
       setIsLoading(false);
     }
@@ -70,107 +76,97 @@ export function useAuth() {
         throw new Error("No token found");
       }
       // Call the logout API
-      await axios.post('/api/auth/logout', {}, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      await api.post('/auth/logout');
     } catch (error: any) {
       // If 401, ignore and proceed to clear session
       if (error.response && error.response.status === 401) {
         console.warn('Session already expired or unauthorized.');
       } else {
-      console.error("Logout error:", error);
-        // Optionally show a toast for other errors
-        // const errorMessage = error.response?.data?.message || "Failed to logout";
-        // toast.error(errorMessage);
+        console.error("Logout error:", error);
       }
     } finally {
       // Always clear local storage and redirect
-      localStorage.removeItem("token");
-      localStorage.removeItem("userData");
-      localStorage.removeItem("userEmail");
-      router.push("/auth/login");
+      handleSessionExpiration();
     }
   };
 
   // Function for sending OTP
   const sendOtp = async (email: string) => {
-    // Mock sending OTP - replace with actual API call
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        if (email && email.includes('@')) {
-          // Store email for OTP verification page
-          localStorage.setItem("userEmail", email);
-          // In a real implementation, this would call an API to send the OTP
-          console.log("Sending OTP to:", email);
-          resolve();
-        } else {
-          reject(new Error("Invalid email address"));
-        }
-      }, 1000);
-    });
+    try {
+      const response = await api.post('/auth/login', { email });
+      if (response.data.status.success) {
+        localStorage.setItem("userEmail", email);
+        return Promise.resolve();
+      } else {
+        throw new Error(response.data.status.message || "Failed to send OTP");
+      }
+    } catch (error: any) {
+      return Promise.reject(new Error(error.response?.data?.status?.message || "Failed to send OTP"));
+    }
   };
 
   // Function for verifying OTP
   const verifyOtp = async (otp: string, email?: string) => {
-    // Mock OTP verification - replace with actual API call
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        // Demo code - in production this would validate against a real OTP
-        if (otp === "123456") {
-          localStorage.setItem("isAuthenticated", "true");
-          
-          // Set user data after successful verification
-          setUser({
-            external_id: "123",
-            first_name: "Admin",
-            last_name: "User",
-            email: email || localStorage.getItem("userEmail") || "user@example.com",
-            is_active: true,
-            created_at: new Date().toISOString(),
-            last_login: new Date().toISOString(),
-            role: 'admin'
-          });
-          
-          resolve();
-        } else {
-          reject(new Error("Invalid verification code"));
-        }
-      }, 1000);
-    });
+    try {
+      const response = await api.post('/auth/login/verify', {
+        email: email || localStorage.getItem("userEmail"),
+        otp: otp
+      });
+
+      if (response.data.status.success) {
+        localStorage.setItem("token", response.data.access.token);
+        localStorage.setItem("userData", JSON.stringify(response.data.data));
+        localStorage.setItem("userEmail", response.data.data.email);
+        localStorage.setItem("isAuthenticated", "true");
+        
+        setUser({
+          external_id: response.data.data.external_id,
+          first_name: response.data.data.first_name,
+          last_name: response.data.data.last_name,
+          email: response.data.data.email,
+          is_active: response.data.data.is_active,
+          created_at: response.data.data.created_at,
+          last_login: response.data.data.last_login,
+          role: response.data.data.role?.name === 'Admin' ? 'admin' : 'user'
+        });
+        
+        return Promise.resolve();
+      } else {
+        throw new Error(response.data.status.message || "Invalid verification code");
+      }
+    } catch (error: any) {
+      return Promise.reject(new Error(error.response?.data?.status?.message || "Failed to verify OTP"));
+    }
   };
 
-  // Function for demonstration login
+  // Function for login
   const login = async (credentials: { email: string; password: string }) => {
     setIsLoading(true);
-    return new Promise<void>(async (resolve, reject) => {
-      try {
-        // Replace this with your real API call
-        const response = await axios.post('/api/auth/login', credentials);
-        const apiUser = response.data.data;
-        // Save user info to localStorage
-        localStorage.setItem("user_external_id", apiUser.external_id);
-        localStorage.setItem("userData", JSON.stringify(apiUser));
-        localStorage.setItem("userEmail", apiUser.email);
-        // Set user state (flatten role to string)
-          setUser({
-          external_id: apiUser.external_id,
-          first_name: apiUser.first_name,
-          last_name: apiUser.last_name,
-          email: apiUser.email,
-          is_active: apiUser.is_active,
-          created_at: apiUser.created_at,
-          last_login: apiUser.last_login,
-          role: apiUser.role?.name === 'Admin' ? 'admin' : 'user',
-          });
-          setIsLoading(false);
-          resolve();
-      } catch (error) {
-          setIsLoading(false);
-          reject(new Error("Invalid credentials"));
-        }
-    });
+    try {
+      const response = await api.post('/auth/login', credentials);
+      const apiUser = response.data.data;
+      
+      localStorage.setItem("user_external_id", apiUser.external_id);
+      localStorage.setItem("userData", JSON.stringify(apiUser));
+      localStorage.setItem("userEmail", apiUser.email);
+      
+      setUser({
+        external_id: apiUser.external_id,
+        first_name: apiUser.first_name,
+        last_name: apiUser.last_name,
+        email: apiUser.email,
+        is_active: apiUser.is_active,
+        created_at: apiUser.created_at,
+        last_login: apiUser.last_login,
+        role: apiUser.role?.name === 'Admin' ? 'admin' : 'user',
+      });
+      
+      setIsLoading(false);
+      return Promise.resolve();
+    } catch (error: any) {
+      setIsLoading(false);
+      return Promise.reject(new Error(error.response?.data?.status?.message || "Invalid credentials"));
+    }
   };
 
   return {

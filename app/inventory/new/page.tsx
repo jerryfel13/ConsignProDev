@@ -735,16 +735,6 @@ function AddNewItemForm() {
             </Link>
             <h1 className="text-2xl font-bold">Add New Item</h1>
           </div>
-          <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-            <Button variant="outline" disabled className="w-full md:w-auto">
-              <ScanLine className="mr-2 h-4 w-4" />
-              Scan Barcode
-            </Button>
-            <Button variant="outline" disabled className="w-full md:w-auto">
-              <Upload className="mr-2 h-4 w-4" />
-              Import Item
-            </Button>
-          </div>
         </div>
 
         <Card>

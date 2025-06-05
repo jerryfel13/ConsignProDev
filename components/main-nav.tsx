@@ -37,7 +37,7 @@ export function MainNav() {
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <nav className="flex flex-col gap-4">
                 <Link
-                  href="/"
+                  href="/dashboard"
                   className="flex items-center text-lg font-medium text-white transition-colors hover:text-white/80"
                   onClick={() => setIsOpen(false)}
                 >
@@ -66,13 +66,6 @@ export function MainNav() {
                 >
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   Sales
-                </Link>
-                <Link
-                  href="/reports"
-                  className="flex items-center text-lg font-medium text-white transition-colors hover:text-white/80"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Reports
                 </Link>
               </nav>
             </SheetContent>

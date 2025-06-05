@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Define the API base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://lwphsims-uat.up.railway.app';
@@ -11,14 +13,56 @@ const api = axios.create({
   },
 });
 
+// Function to check if token is expired
+export const isTokenExpired = (token: string): boolean => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp && Date.now() >= payload.exp * 1000;
+  } catch (e) {
+    return true; // If token is not a valid JWT, consider it expired
+  }
+};
+
+// Function to handle session expiration
+export const handleSessionExpiration = () => {
+  // Clear all auth-related data
+  localStorage.removeItem('token');
+  localStorage.removeItem('userData');
+  localStorage.removeItem('userEmail');
+  localStorage.removeItem('isAuthenticated');
+  
+  // Show toast notification
+  toast.error('Your session has expired. Please log in again.');
+  
+  // Redirect to login page
+  window.location.href = '/auth/login';
+};
+
 // Add request interceptor to include auth token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
+  
+  // Check if token exists and is not expired
   if (token) {
+    if (isTokenExpired(token)) {
+      handleSessionExpiration();
+      return Promise.reject('Token expired');
+    }
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
+
+// Add response interceptor to handle 401 responses
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      handleSessionExpiration();
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Types
 export interface CreateClientRequest {
@@ -76,4 +120,6 @@ export const clientApi = {
     );
     return response.data;
   },
-}; 
+};
+
+export default api; 
