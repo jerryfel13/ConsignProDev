@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type SubmitHandler, type FieldValues } from "react-hook-form";
@@ -140,7 +140,8 @@ const parseCurrencyInput = (value: string) => {
 const CLOUDINARY_UPLOAD_PRESET = "lwphsims"; // <-- replace with your actual preset
 const CLOUDINARY_CLOUD_NAME = "dsaiym2rw"; // <-- replace with your actual cloud name
 
-export default function AddNewItemPage() {
+// Create a client component for the form
+function AddNewItemForm() {
   const searchParams = useSearchParams();
   const consignorId = searchParams?.get('consignorId');
   const isConsigned = searchParams?.get('isConsigned') === 'true';
@@ -867,6 +868,7 @@ export default function AddNewItemPage() {
                           <FormControl>
                           <Input 
                             {...field} 
+                            maxLength={100}
                             className={form.formState.errors.name ? "border-red-500" : ""}
                           />
                           </FormControl>
@@ -882,7 +884,7 @@ export default function AddNewItemPage() {
                         <FormItem>
                           <FormLabel>Model</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} maxLength={100} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -896,7 +898,7 @@ export default function AddNewItemPage() {
                         <FormItem>
                           <FormLabel>Material</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} maxLength={100} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -910,7 +912,7 @@ export default function AddNewItemPage() {
                         <FormItem>
                           <FormLabel>Hardware</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} maxLength={100} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -924,7 +926,7 @@ export default function AddNewItemPage() {
                         <FormItem>
                           <FormLabel>Measurement</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} maxLength={100} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -938,7 +940,7 @@ export default function AddNewItemPage() {
                         <FormItem>
                           <FormLabel>Code</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} maxLength={100} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1495,5 +1497,14 @@ export default function AddNewItemPage() {
         onAuthenticatorAdded={handleAuthenticatorAdded}
       />
     </div>
+  );
+}
+
+// Main page component
+export default function AddNewItemPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AddNewItemForm />
+    </Suspense>
   );
 } 

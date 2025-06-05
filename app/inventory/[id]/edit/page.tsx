@@ -857,6 +857,7 @@ export default function EditProductPage() {
                   name="name"
                   value={formData.name || ""}
                   onChange={handleInputChange}
+                  maxLength={100}
                 />
               </div>
               <div className="space-y-2">
@@ -866,6 +867,7 @@ export default function EditProductPage() {
                   name="code"
                   value={formData.code || ""}
                   onChange={handleInputChange}
+                  maxLength={100}
                 />
               </div>
               <div className="space-y-2">
@@ -875,6 +877,7 @@ export default function EditProductPage() {
                   name="material"
                   value={formData.material || ""}
                   onChange={handleInputChange}
+                  maxLength={100}
                 />
               </div>
               <div className="space-y-2">
@@ -884,6 +887,7 @@ export default function EditProductPage() {
                   name="hardware"
                   value={formData.hardware || ""}
                   onChange={handleInputChange}
+                  maxLength={100}
                 />
               </div>
               <div className="space-y-2">
@@ -893,6 +897,7 @@ export default function EditProductPage() {
                   name="measurement"
                   value={formData.measurement || ""}
                   onChange={handleInputChange}
+                  maxLength={100}
                 />
               </div>
               <div className="space-y-2">

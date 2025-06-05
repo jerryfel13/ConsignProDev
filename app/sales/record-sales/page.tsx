@@ -394,6 +394,8 @@ export default function CreateReceiptPage() {
     }
   };
 
+  const paymentAmountNumber = parseFloat(paymentAmount.replace(/,/g, "") || "0");
+
   return (
     <div className="min-h-screen bg-[#fafafa] p-4 md:p-8">
       <div className="flex justify-between items-center mb-2">
@@ -1044,7 +1046,7 @@ export default function CreateReceiptPage() {
                 {isLayaway && (
                   <div className="flex justify-between text-blue-600">
                     <span>Outstanding Balance:</span>
-                    <span>₱{(calculateTotal() - parseFloat(paymentAmount)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    <span>₱{(calculateTotal() - paymentAmountNumber).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
           </div>
                 )}
           </div>
