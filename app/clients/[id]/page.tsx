@@ -101,32 +101,6 @@ const items = [
   },
 ];
 
-// Mock consignments data
-const clientConsignments = [
-  {
-    id: "con-1",
-    code: "LV-NF-001",
-    brand: "Louis Vuitton",
-    model: "Neverfull MM",
-    description: "Damier Ebene MM Tote Bag",
-    dateReceived: "2023-04-15",
-    status: "Listed",
-    sellingPrice: "₱145,000.00",
-    commission: "20%",
-  },
-  {
-    id: "con-2",
-    code: "CC-CF-002",
-    brand: "Chanel",
-    model: "Classic Flap",
-    description: "Medium Black Caviar with Gold Hardware",
-    dateReceived: "2023-03-10",
-    status: "Sold",
-    sellingPrice: "₱250,000.00",
-    commission: "25%",
-  },
-];
-
 type Item = {
   id: number;
   brand: string;
@@ -175,6 +149,11 @@ export default function ClientDetailPage({
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [transactionsError, setTransactionsError] = useState<string | null>(null);
+
+  // Consigned items state
+  const [clientConsignments, setClientConsignments] = useState<any[]>([]);
+  const [loadingConsignments, setLoadingConsignments] = useState(false);
+  const [consignmentsError, setConsignmentsError] = useState<string | null>(null);
 
   // Properly unwrap params using React.use()
   const unwrappedParams = use(params);
@@ -241,6 +220,37 @@ export default function ClientDetailPage({
       })
       .finally(() => setLoadingTransactions(false));
   }, [clientId]);
+
+  // Fetch consigned items for the client
+  useEffect(() => {
+    // Only fetch if clientData is loaded and is_consignor is true
+    const isConsignor = clientData && (clientData.is_consignor || (clientData.client && clientData.client.is_consignor));
+    if (!clientId || !isConsignor) return;
+    setLoadingConsignments(true);
+    setConsignmentsError(null);
+    axios
+      .get(`https://lwphsims-uat.up.railway.app/products/consignor/${clientId}/items`, {
+        params: {
+          pageNumber: 1,
+          displayPerPage: 50,
+          sortBy: 'name',
+          orderBy: 'asc',
+        },
+      })
+      .then((res) => {
+        if (res.data.status?.success) {
+          setClientConsignments(res.data.data || []);
+        } else {
+          setClientConsignments([]);
+          setConsignmentsError("No consigned items found.");
+        }
+      })
+      .catch(() => {
+        setClientConsignments([]);
+        setConsignmentsError("Failed to fetch consigned items.");
+      })
+      .finally(() => setLoadingConsignments(false));
+  }, [clientId, clientData]);
 
   useEffect(() => {
     if (showDeleteResult?.success) {
@@ -777,7 +787,7 @@ export default function ClientDetailPage({
                     <CardTitle>Consignment Items</CardTitle>
                   </div>
                   <Button size="sm" asChild>
-                    <Link href={`/consignments/new?clientId=${clientId}`}>
+                    <Link href={`/inventory/new?consignorId=${clientId}&isConsigned=true&from=client-profile`}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Consignment
                     </Link>
@@ -788,81 +798,68 @@ export default function ClientDetailPage({
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                {clientConsignments.length > 0 ? (
+                {loadingConsignments ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2 mx-auto"></div>
+                    <span className="text-muted-foreground">Loading consigned items...</span>
+                  </div>
+                ) : consignmentsError ? (
+                  <div className="text-center py-12 text-destructive">
+                    {consignmentsError}
+                  </div>
+                ) : clientConsignments.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
                         <tr className="border-b bg-gray-50">
-                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                            Code
-                          </th>
-                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                            Item
-                          </th>
-                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                            Date
-                          </th>
-                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">
-                            Price
-                          </th>
-                          <th className="text-center py-3 px-4 font-medium text-muted-foreground">
-                            Status
-                          </th>
-                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">
-                            Actions
-                          </th>
+                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Code</th>
+                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Item</th>
+                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Date</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">Price</th>
+                          <th className="text-center py-3 px-4 font-medium text-muted-foreground">Status</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {clientConsignments.map((consignment) => (
+                        {clientConsignments.map((item) => (
                           <tr
-                            key={consignment.id}
+                            key={item.stock_external_id}
                             className="border-b hover:bg-gray-50 transition-colors"
                           >
-                            <td className="py-4 px-4 font-medium">
-                              {consignment.code}
-                            </td>
+                            <td className="py-4 px-4 font-medium">{item.code || item.stock_code || '-'}</td>
                             <td className="py-4 px-4">
                               <div>
-                                <div className="font-medium">
-                                  {consignment.brand} {consignment.model}
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                  {consignment.description}
-                                </div>
+                                <div className="font-medium">{item.brand?.name || item.brand || ''} {item.model || ''}</div>
+                                <div className="text-sm text-muted-foreground">{item.description || ''}</div>
                               </div>
                             </td>
-                            <td className="py-4 px-4">
-                              {consignment.dateReceived}
-                            </td>
-                            <td className="py-4 px-4 text-right font-medium">
-                              {consignment.sellingPrice}
-                            </td>
+                            <td className="py-4 px-4">{item.consigned_date ? new Date(item.consigned_date).toLocaleDateString() : '-'}</td>
+                            <td className="py-4 px-4 text-right font-medium">₱{item.price ? Number(item.price).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}</td>
                             <td className="py-4 px-4 text-center">
                               <Badge
                                 variant="outline"
-                                className={`${
-                                  consignment.status === "Sold"
-                                    ? "bg-black text-white hover:bg-black"
-                                    : consignment.status === "Listed"
+                                className={
+                                  item.stock?.qty_in_stock > 0
                                     ? "bg-blue-500 text-white hover:bg-blue-500"
-                                    : ""
-                                }`}
+                                    : "bg-black text-white hover:bg-black"
+                                }
                               >
-                                {consignment.status}
+                                {item.stock?.qty_in_stock > 0 ? 'Listed' : 'Sold'}
                               </Badge>
                             </td>
                             <td className="py-4 px-4 text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                asChild
-                                className="h-8"
-                              >
-                                <Link href={`/consignments/${consignment.id}`}>
-                                  View Details
-                                </Link>
-                              </Button>
+                              {item.stock_external_id ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  asChild
+                                  className="h-8"
+                                >
+                                  <Link href={`/inventory/${item.stock_external_id}?from=consignments`}>
+                                    View Details
+                                  </Link>
+                                </Button>
+                              ) : null}
                             </td>
                           </tr>
                         ))}
@@ -871,24 +868,15 @@ export default function ClientDetailPage({
                   </div>
                 ) : (
                   <div className="text-center py-12">
-                    <p className="text-muted-foreground mb-4">
-                      No consignment items found for this client
-                    </p>
+                    <p className="text-muted-foreground mb-4">No consignment items found for this client</p>
                     <Button asChild>
-                      <Link href={`/consignments/new?clientId=${clientId}`}>
+                      <Link href={`/inventory/new?consignorId=${clientId}&isConsigned=true&from=client-profile`}>
                         <Plus className="h-4 w-4 mr-2" />
                         Add Consignment
                       </Link>
                     </Button>
                   </div>
                 )}
-                <div className="p-4 flex justify-end">
-                  <Button variant="outline" asChild>
-                    <Link href={`/clients/${clientId}/consignments`}>
-                      View All Consignments
-                    </Link>
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>

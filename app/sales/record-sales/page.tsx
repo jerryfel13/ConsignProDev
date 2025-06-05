@@ -7,7 +7,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Eye, X, Upload, AlertCircle } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,6 +74,9 @@ const ALLOWED_FILE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export default function CreateReceiptPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const clientId = searchParams?.get('clientId') || "";
+  const fromPage = searchParams?.get('from') || "sales";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [clientSearch, setClientSearch] = useState("");
@@ -81,7 +84,7 @@ export default function CreateReceiptPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [productSearch, setProductSearch] = useState("");
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
-  const [selectedClient, setSelectedClient] = useState<string>("");
+  const [selectedClient, setSelectedClient] = useState<string>(clientId);
   const [isLayaway, setIsLayaway] = useState(false);
   const [isDiscounted, setIsDiscounted] = useState(false);
   const [discountType, setDiscountType] = useState<"percentage" | "flat">("percentage");
@@ -149,36 +152,41 @@ export default function CreateReceiptPage() {
         });
 
         if (clientsResponse.data.status?.success) {
-          setClients(clientsResponse.data.data.map((c: any) => ({
+          const clientsData = clientsResponse.data.data.map((c: Client) => ({
             external_id: c.external_id,
             first_name: c.first_name,
             last_name: c.last_name,
             is_consignor: c.is_consignor || false
-          })));
+          }));
+          setClients(clientsData);
+          
+          // If clientId is provided, validate it exists
+          if (clientId) {
+            const clientExists = clientsData.some(c => c.external_id === clientId);
+            if (!clientExists) {
+              toast.error("Selected client not found");
+              setSelectedClient("");
+            }
+          }
         }
 
         if (productsResponse.data.status?.success) {
           setProducts(productsResponse.data.data);
-          console.log(productsResponse.data.data);
         }
       } catch (error: any) {
         console.error("Failed to fetch data:", error);
         if (error.response) {
-          // The request was made and the server responded with a status code
-          // that falls out of the range of 2xx
           toast.error(error.response.data?.message || "Failed to fetch data");
         } else if (error.request) {
-          // The request was made but no response was received
           toast.error("No response from server. Please check your connection.");
         } else {
-          // Something happened in setting up the request that triggered an Error
           toast.error("An error occurred while setting up the request.");
         }
       }
     };
 
     fetchData();
-  }, []);
+  }, [clientId]);
 
   // Update filtered clients when search or clients change
   useEffect(() => {
@@ -390,10 +398,14 @@ export default function CreateReceiptPage() {
     <div className="min-h-screen bg-[#fafafa] p-4 md:p-8">
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2">
-          <Link href="/sales" className="text-lg font-medium">← Back to Sales</Link>
+          <Link 
+            href={fromPage === "clients" ? "/clients" : "/sales"} 
+            className="text-lg font-medium"
+          >
+            ← Back to {fromPage === "clients" ? "Clients" : "Sales"}
+          </Link>
         </div>
         <div className="flex gap-2 items-center">
-          <Button variant="ghost" size="icon"><Eye /></Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting ? "Saving..." : "Save"}
           </Button>

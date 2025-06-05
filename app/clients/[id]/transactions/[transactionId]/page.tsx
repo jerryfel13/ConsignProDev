@@ -260,7 +260,7 @@ export default function TransactionDetailPage({
         }
       }
       const doc = new jsPDF();
-      const logoUrl = "/logo.png";
+      const logoUrl = "/lwlogo.jpg";
       const img = new window.Image();
       img.crossOrigin = "Anonymous";
       img.src = logoUrl;
@@ -343,6 +343,69 @@ export default function TransactionDetailPage({
     }
   };
 
+  const printReceipt = () => {
+    if (!sale) return;
+    const html = `
+      <div style="max-width:400px;margin:0 auto;padding:0 0 12px 0;font-family:Arial,sans-serif;color:#222;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+          <img src="/lwlogo.jpg" alt="Luxurywish Logo" style="width:60px;object-fit:contain;" />
+          <div style="font-size:18px;font-weight:700;letter-spacing:1px;color:#222;margin-top:8px;">RECEIPT#${sale?.sale_external_id || ''}</div>
+        </div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px;">Luxurywish</div>
+        <div style="font-size:12px;color:#444;line-height:1.3;margin-bottom:2px;">LWPH, Unit 2307, TFT building, BGC Taguig City -</div>
+        <div style="font-size:12px;color:#444;margin-bottom:8px;">www.luxurywishph.com • +639270280001 • @luxurywishph</div>
+        <div style="border-top:2px solid #222;margin:12px 0 8px 0;"></div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">1 item (Qty.: ${sale?.product?.[0]?.qty || 1})</div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+          <tbody>
+            <tr>
+              <td style="font-weight:700;font-size:14px;padding:2px 0;">Item</td>
+              <td style="text-align:right;font-size:14px;font-weight:600;padding:2px 0;">₱${sale?.product?.[0]?.unit_price ? Number(sale.product[0].unit_price).toLocaleString('en-US', { minimumFractionDigits: 0 }) : ''}</td>
+            </tr>
+            <tr>
+              <td style="font-weight:700;font-size:14px;padding:2px 0;">Code</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td style="font-weight:700;font-size:14px;padding:2px 0;">Inclusion</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="border-top:1.5px solid #222;margin:10px 0 8px 0;"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+          <div style="font-size:16px;font-weight:700;color:#222;">Total:</div>
+          <div style="font-size:18px;font-weight:700;color:#222;">₱${sale?.total_amount ? Number(sale.total_amount).toLocaleString('en-US', { minimumFractionDigits: 0 }) : ''}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:14px;font-weight:600;color:#444;">Cash:</div>
+          <div style="font-size:15px;font-weight:600;color:#444;">₱${sale?.total_amount ? Number(sale.total_amount).toLocaleString('en-US', { minimumFractionDigits: 0 }) : ''}</div>
+        </div>
+        <div style="border-top:2px solid #222;margin:14px 0 10px 0;"></div>
+        <div style="text-align:center;font-size:13px;color:#222;font-weight:600;line-height:1.4;margin-bottom:2px;">No Return/ No Exchange Policy</div>
+        <div style="text-align:center;font-size:13px;color:#222;font-weight:700;">All sales are final</div>
+        <div style="text-align:center;font-size:13px;color:#222;font-weight:600;">No refund unless proven fake</div>
+        <div style="text-align:center;font-size:13px;color:#222;font-weight:600;">We offer lifetime moneyback guarantee on all items.</div>
+        <div style="text-align:center;font-size:12px;color:#888;margin-top:10px;">${sale?.date_purchased ? new Date(sale.date_purchased).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</div>
+      </div>
+    `;
+    const printWindow = window.open('', '', 'height=800,width=600');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Receipt</title>
+        </head>
+        <body>${html}</body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div className="text-red-600">{error}</div>;
   if (!sale) return null;
@@ -359,15 +422,17 @@ export default function TransactionDetailPage({
                   size="sm"
                   className="-ml-2"
                   onClick={() => {
-                    if (from === "sales") {
+                    if (from === "consignments" && sale?.Customer?.external_id) {
+                      router.push(`/clients/${sale.Customer.external_id}/consignments`);
+                    } else if (from === "sales") {
                       router.push("/sales");
                     } else {
                       router.back();
                     }
                   }}
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-1" />
-                    Back
+                >
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  Back
                 </Button>
                 <h2 className="text-xl font-bold">Transaction Details</h2>
               </div>
@@ -541,22 +606,22 @@ export default function TransactionDetailPage({
                     </DialogContent>
                   </Dialog>
                 )}
-              <Badge
-                variant={
-                    sale.status === "Completed" ? "default" : 
-                    sale.status === "Cancelled" ? "destructive" : "outline"
-                }
-                className={
-                    sale.status === "Completed"
-                    ? "bg-black text-white hover:bg-black"
-                      : sale.status === "Cancelled"
-                      ? "bg-red-500 text-white hover:bg-red-500"
-                    : ""
-                }
-              >
-                <Clock className="mr-1 h-3 w-3" />
-                  {sale.status}
-              </Badge>
+                <Badge
+                  variant={
+                      sale.status === "Completed" ? "default" : 
+                      sale.status === "Cancelled" ? "destructive" : "outline"
+                  }
+                  className={
+                      sale.status === "Completed"
+                      ? "bg-black text-white hover:bg-black"
+                        : sale.status === "Cancelled"
+                        ? "bg-red-500 text-white hover:bg-red-500"
+                      : ""
+                  }
+                >
+                  <Clock className="mr-1 h-3 w-3" />
+                    {sale.status}
+                </Badge>
               </div>
             </div>
           </CardHeader>
@@ -759,6 +824,7 @@ export default function TransactionDetailPage({
                       <Button
                         className="w-full flex items-center justify-center"
                         variant="outline"
+                        onClick={printReceipt}
                       >
                         <Printer className="h-4 w-4 mr-2" />
                         Print Receipt

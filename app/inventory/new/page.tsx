@@ -72,7 +72,7 @@ import {
 } from "@hello-pangea/dnd";
 import Image from "next/image";
 import { toast } from "react-hot-toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const formSchema = z.object({
   category_ext_id: z.string().min(1, "Category is required"),
@@ -141,6 +141,11 @@ const CLOUDINARY_UPLOAD_PRESET = "lwphsims"; // <-- replace with your actual pre
 const CLOUDINARY_CLOUD_NAME = "dsaiym2rw"; // <-- replace with your actual cloud name
 
 export default function AddNewItemPage() {
+  const searchParams = useSearchParams();
+  const consignorId = searchParams?.get('consignorId');
+  const isConsigned = searchParams?.get('isConsigned') === 'true';
+  const fromPage = searchParams?.get('from') || "inventory";
+  
   const [itemType, setItemType] = useState("product");
   const [categories, setCategories] = useState<{ external_id: string; name: string }[]>([]);
   const [brands, setBrands] = useState<{ external_id: string; name: string }[]>([]);
@@ -342,10 +347,10 @@ export default function AddNewItemPage() {
       },
       cost: 0,
       price: 0,
-      is_consigned: false,
-      consignor_ext_id: "",
+      is_consigned: isConsigned || false,
+      consignor_ext_id: consignorId || "",
       consignor_selling_price: 0,
-      consigned_date: "",
+      consigned_date: new Date().toISOString().split('T')[0],
       created_by: "admin_user",
     },
   });
@@ -354,6 +359,14 @@ export default function AddNewItemPage() {
 
   // Get logged-in user's external ID
   const userExternalId = typeof window !== 'undefined' ? localStorage.getItem("user_external_id") : null;
+
+  // Update form when consignorId changes
+  useEffect(() => {
+    if (consignorId) {
+      form.setValue('is_consigned', true);
+      form.setValue('consignor_ext_id', consignorId);
+    }
+  }, [consignorId, form]);
 
   const onSubmit: SubmitHandler<FormData> = async (data, event) => {
     try {
@@ -674,7 +687,7 @@ export default function AddNewItemPage() {
   };
 
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       {showSuccessPrompt && (
         <div className="fixed top-4 right-4 z-50">
           <div className="bg-white rounded-lg shadow-lg p-4 border border-green-200 flex items-center gap-3">
@@ -710,10 +723,13 @@ export default function AddNewItemPage() {
       <div className="flex flex-col p-4 md:p-6 space-y-6 max-w-4xl mx-auto w-full">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4 w-full md:w-auto">
-            <Link href="/inventory" passHref>
+            <Link 
+              href={fromPage === "client-profile" && consignorId ? `/clients/${consignorId}` : fromPage === "clients" && consignorId ? `/clients/${consignorId}/consignments` : "/inventory"} 
+              passHref
+            >
               <Button variant="outline" size="icon">
                 <ArrowLeft className="h-4 w-4" />
-                <span className="sr-only">Back to Inventory</span>
+                <span className="sr-only">Back to {fromPage === "client-profile" && consignorId ? "Client Profile" : fromPage === "clients" && consignorId ? "Client Consignments" : "Inventory"}</span>
               </Button>
             </Link>
             <h1 className="text-2xl font-bold">Add New Item</h1>
@@ -1167,11 +1183,11 @@ export default function AddNewItemPage() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                {consignors.map((consignor) => (
-                                  <SelectItem key={consignor.external_id} value={consignor.external_id}>
-                                    {consignor.first_name} {consignor.last_name}
-                                  </SelectItem>
-                                ))}
+                                  {consignors.map((consignor) => (
+                                    <SelectItem key={consignor.external_id} value={consignor.external_id}>
+                                      {consignor.first_name} {consignor.last_name}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -1185,84 +1201,84 @@ export default function AddNewItemPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Consignor Selling Price</FormLabel>
-                            <FormControl>
-                              <Input 
-                                value={consignorPriceDisplay}
-                                onChange={e => {
-                                  const raw = parseCurrencyInput(e.target.value);
-                                  field.onChange(raw);
-                                  setConsignorPriceDisplay(e.target.value === "" ? "" : raw ? formatCurrency(raw) : "");
-                                }}
-                                placeholder="0.00"
-                                inputMode="decimal"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </>
-                  )}
-
-                  <FormField
-                    control={form.control}
-                    name="stock.min_qty"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1">
-                          Minimum Quantity
-                          <span className="text-red-500">*</span>
-                        </FormLabel>
                               <FormControl>
                                 <Input 
-                                  type="number" 
-                            min={0}
-                            step="1"
-                                  {...field} 
-                            onChange={(e) => {
-                              const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                              field.onChange(value);
-                            }}
-                            className={form.formState.errors.stock?.min_qty ? "border-red-500" : ""}
+                                  value={consignorPriceDisplay}
+                                  onChange={e => {
+                                    const raw = parseCurrencyInput(e.target.value);
+                                    field.onChange(raw);
+                                    setConsignorPriceDisplay(e.target.value === "" ? "" : raw ? formatCurrency(raw) : "");
+                                  }}
+                                  placeholder="0.00"
+                                  inputMode="decimal"
                                 />
                               </FormControl>
-                        <FormDescription>
-                          The minimum quantity that should be maintained in stock
-                        </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-
-                  <FormField
-                    control={form.control}
-                    name="stock.qty_in_stock"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1">
-                          Quantity in Stock
-                          <span className="text-red-500">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            min={0}
-                            step="1"
-                            {...field}
-                            onChange={(e) => {
-                              const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                              field.onChange(value);
-                            }}
-                            className={form.formState.errors.stock?.qty_in_stock ? "border-red-500" : ""}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Current quantity available in stock
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
+                      </>
                     )}
-                  />
+
+                    <FormField
+                      control={form.control}
+                      name="stock.min_qty"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-1">
+                            Minimum Quantity
+                            <span className="text-red-500">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min={0}
+                              step="1"
+                              {...field} 
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                                field.onChange(value);
+                              }}
+                              className={form.formState.errors.stock?.min_qty ? "border-red-500" : ""}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            The minimum quantity that should be maintained in stock
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="stock.qty_in_stock"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-1">
+                            Quantity in Stock
+                            <span className="text-red-500">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min={0}
+                              step="1"
+                              {...field}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                                field.onChange(value);
+                              }}
+                              className={form.formState.errors.stock?.qty_in_stock ? "border-red-500" : ""}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Current quantity available in stock
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
 
                   <div className="space-y-4">
@@ -1478,6 +1494,6 @@ export default function AddNewItemPage() {
         onClose={() => setIsAuthenticatorModalOpen(false)}
         onAuthenticatorAdded={handleAuthenticatorAdded}
       />
-    </>
+    </div>
   );
 } 

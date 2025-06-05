@@ -199,7 +199,7 @@ const columns: ColumnDef<any>[] = [
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Link
-                    href={`/consignments/new?clientId=${client.id}`}
+                    href={`/inventory/new?consignorId=${client.id}&isConsigned=true&from=clients`}
                     className="flex items-center"
                   >
                     <span>Add Consignment</span>
@@ -207,7 +207,7 @@ const columns: ColumnDef<any>[] = [
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Link
-                    href={`/clients/items/items/new?clientId=${client.id}`}
+                    href={`/sales/record-sales?clientId=${client.id}&from=clients`}
                     className="flex items-center"
                   >
                     <span>Add Purchase Item</span>
@@ -217,7 +217,7 @@ const columns: ColumnDef<any>[] = [
             ) : (
               <DropdownMenuItem>
                 <Link
-                  href={`/clients/items/items/new?clientId=${client.id}`}
+                  href={`/sales/record-sales?clientId=${client.id}&from=clients`}
                   className="flex items-center"
                 >
                   <span>Add Purchase Item</span>
@@ -263,6 +263,17 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
   const [globalFilter, setGlobalFilter] = useState("");
   const [searchType, setSearchType] = useState<"name" | "contact" | "id">("name");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  // Add retry effect
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+      }, 3000); // Retry every 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [error, retryCount]);
 
   const table = useReactTable({
     data: initialClients,
@@ -288,9 +299,18 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
 
   if (error) {
     return (
-      <div className="text-red-500 text-center p-4">
-        Error loading clients: {error}
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg sm:text-xl">Manage Clients</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+            <p className="text-muted-foreground">Loading clients...</p>
+            <p className="text-sm text-muted-foreground mt-2">Retrying in a few seconds...</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
