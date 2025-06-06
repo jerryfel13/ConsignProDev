@@ -232,7 +232,7 @@ const columns: ColumnDef<any>[] = [
               }}
               className="text-red-600"
             >
-              Deactivate Client
+              Delete Client
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

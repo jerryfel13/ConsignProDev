@@ -250,10 +250,13 @@ export default function TransactionDetailPage({
     try {
       const doc = new jsPDF();
       doc.setFont("helvetica");
+      
+      // Add logo
       const logoUrl = "/lwlogo.jpg";
       const img = new window.Image();
       img.crossOrigin = "Anonymous";
       img.src = logoUrl;
+      
       img.onload = function () {
         // Auto-size logo
         const maxWidth = 40;
@@ -269,77 +272,154 @@ export default function TransactionDetailPage({
           height = maxHeight;
         }
         doc.addImage(img, "PNG", 14, 8, width, height);
-        // Centered title below logo
+
+        // Header
         const titleY = 8 + height + 8;
-        doc.setFontSize(16);
+        doc.setFontSize(18);
+        doc.setFont("helvetica", "bold");
         const pageWidth = doc.internal.pageSize.getWidth();
-        const title = "Transaction Receipt";
+        const title = "RECEIPT";
         const textWidth = doc.getTextWidth(title);
-        doc.text(title, (pageWidth - textWidth) / 2, titleY);
-        doc.setFontSize(10);
-        // Transaction Info Table
-        autoTable(doc, {
-          startY: titleY + 6,
-          head: [["Field", "Value"]],
-          body: [
-            ["Reference #", sale.sale_external_id],
-            ["Date Purchased", sale.date_purchased ? new Date(sale.date_purchased).toLocaleDateString() : "-"],
-            ["Type", sale.type?.description || "-"],
-            ["Status", sale.status],
-            ["Customer", sale.Customer?.name || "-"],
-          ],
-          styles: { font: "helvetica" },
-        });
-        // Items Table
-        autoTable(doc, {
-          startY: doc.lastAutoTable.finalY + 6,
-          head: [["Item", "Qty", "Unit Price", "Subtotal"]],
-          body: sale.product.map((item: any) => [
-            item.name,
-            item.qty,
-            `PHP ${Number(item.unit_price).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
-            `PHP ${Number(item.subtotal).toLocaleString("en-US", { minimumFractionDigits: 2 })}`
-          ]),
-          styles: { font: "helvetica" },
-        });
-        // Payment History Table
-        let lastY = doc.lastAutoTable.finalY;
-        if (sale.payment_history && sale.payment_history.length > 0) {
-          autoTable(doc, {
-            startY: doc.lastAutoTable.finalY + 6,
-            head: [["Amount", "Date", "Method"]],
-            body: sale.payment_history.map((ph: any) => [
-              `PHP ${Number(ph.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
-              ph.payment_date ? new Date(ph.payment_date).toLocaleDateString() : "-",
-              ph.payment_method
-            ]),
-            styles: { font: "helvetica" },
-          });
-          lastY = doc.lastAutoTable.finalY;
-        }
-        // Summary
+        doc.text(title, pageWidth - textWidth - 14, titleY);
+        
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "normal");
+        doc.text(`#${sale.sale_external_id}`, pageWidth - doc.getTextWidth(`#${sale.sale_external_id}`) - 14, titleY + 7);
+
+        // Company Info
+        doc.setFontSize(13);
+        doc.setFont("helvetica", "bold");
+        doc.text("Luxurywish", 14, titleY + 20);
+        
+        doc.setFont("helvetica", "normal");
         doc.setFontSize(12);
-        doc.text(
-          `Total: PHP ${Number(sale.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
-          14,
-          lastY + 12
-        );
+        doc.text("Trade and Financial Tower, BGC Taguig City", 14, titleY + 27);
+        doc.text("www.luxurywish.com.ph • IG: @luxurywishph", 14, titleY + 34);
+
+        // Date and Time
+        let currentY = titleY + 45;
+        doc.setFont("helvetica", "bold");
+        doc.text("Date:", 14, currentY);
+        doc.setFont("helvetica", "normal");
+        doc.text(sale.date_purchased ? new Date(sale.date_purchased).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '-', pageWidth - doc.getTextWidth(sale.date_purchased ? new Date(sale.date_purchased).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '-') - 14, currentY);
+        
+        currentY += 7;
+        doc.setFont("helvetica", "bold");
+        doc.text("Time:", 14, currentY);
+        doc.setFont("helvetica", "normal");
+        doc.text(sale.date_purchased ? new Date(sale.date_purchased).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-', pageWidth - doc.getTextWidth(sale.date_purchased ? new Date(sale.date_purchased).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-') - 14, currentY);
+
+        // Customer Information
+        currentY += 15;
+        doc.setFont("helvetica", "bold");
+        doc.text("Customer Information", 14, currentY);
+        currentY += 7;
+        doc.setFont("helvetica", "normal");
+        doc.text(sale.Customer?.name || '-', 14, currentY);
+        currentY += 7;
+        doc.text(sale.Customer?.email || '-', 14, currentY);
+        currentY += 7;
+        doc.text(sale.Customer?.contact_no || '-', 14, currentY);
+
+        // Items
+        currentY += 15;
+        doc.setFont("helvetica", "bold");
+        doc.text(`${sale.product?.length || 1} item${sale.product?.length > 1 ? 's' : ''}`, 14, currentY);
+        currentY += 7;
+
+        // Items Table
+        const items = sale.product?.map((item: any) => [
+          item.name,
+          item.code || '-',
+          item.inclusions || '-',
+          `PHP ${Number(item.unit_price).toLocaleString('en-US', { minimumFractionDigits: 0 })}`,
+          item.qty.toString(),
+          `PHP ${Number(item.subtotal).toLocaleString('en-US', { minimumFractionDigits: 0 })}`
+        ]) || [];
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Item', 'Code', 'Inclusions', 'Unit Price', 'Qty', 'Subtotal']],
+          body: items,
+          theme: 'grid',
+          headStyles: { fillColor: [34, 34, 34], textColor: [255, 255, 255], fontStyle: 'bold' },
+          styles: { fontSize: 10, cellPadding: 3 },
+          columnStyles: {
+            0: { cellWidth: 50 },
+            1: { cellWidth: 30 },
+            2: { cellWidth: 40 },
+            3: { cellWidth: 25, halign: 'right' },
+            4: { cellWidth: 15, halign: 'center' },
+            5: { cellWidth: 25, halign: 'right' }
+          }
+        });
+
+        currentY = (doc as any).lastAutoTable.finalY + 10;
+
+        // Payment History
+        if (sale.payment_history && sale.payment_history.length > 0) {
+          doc.setFont("helvetica", "bold");
+          doc.text("Payment History", 14, currentY);
+          currentY += 7;
+
+          const payments = sale.payment_history.map((ph: any) => [
+            ph.payment_date ? new Date(ph.payment_date).toLocaleDateString() : '-',
+            `PHP ${Number(ph.amount).toLocaleString('en-US', { minimumFractionDigits: 0 })}`,
+            ph.payment_method
+          ]);
+
+          autoTable(doc, {
+            startY: currentY,
+            head: [['Date', 'Amount', 'Method']],
+            body: payments,
+            theme: 'grid',
+            headStyles: { fillColor: [34, 34, 34], textColor: [255, 255, 255], fontStyle: 'bold' },
+            styles: { fontSize: 10, cellPadding: 3 },
+            columnStyles: {
+              0: { cellWidth: 40 },
+              1: { cellWidth: 40, halign: 'right' },
+              2: { cellWidth: 40, halign: 'right' }
+            }
+          });
+
+          currentY = (doc as any).lastAutoTable.finalY + 10;
+        }
+
+        // Totals
         if (sale.is_discounted) {
-          doc.text(
-            sale.discount_percent !== "0.00"
-              ? `Discount: ${sale.discount_percent}%`
-              : `Discount: PHP ${Number(sale.discount_flat_rate).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
-            14,
-            lastY + 18
-          );
+          doc.setFont("helvetica", "normal");
+          doc.text("Total Price:", 14, currentY);
+          doc.text(`PHP ${sale.product.reduce((sum: number, item: any) => sum + Number(item.subtotal), 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}`, pageWidth - doc.getTextWidth(`PHP ${sale.product.reduce((sum: number, item: any) => sum + Number(item.subtotal), 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}`) - 14, currentY);
+          
+          currentY += 7;
+          doc.text("Discount:", 14, currentY);
+          const discountText = sale.discount_percent !== "0.00" 
+            ? `${sale.discount_percent}%` 
+            : `PHP ${Number(sale.discount_flat_rate).toLocaleString('en-US', { minimumFractionDigits: 0 })}`;
+          doc.text(discountText, pageWidth - doc.getTextWidth(discountText) - 14, currentY);
+          
+          currentY += 7;
+          doc.setFont("helvetica", "bold");
+          doc.text("Discounted Price:", 14, currentY);
+          doc.text(`PHP ${Number(sale.total_amount).toLocaleString('en-US', { minimumFractionDigits: 0 })}`, pageWidth - doc.getTextWidth(`PHP ${Number(sale.total_amount).toLocaleString('en-US', { minimumFractionDigits: 0 })}`) - 14, currentY);
+        } else {
+          doc.setFont("helvetica", "bold");
+          doc.text("Total:", 14, currentY);
+          doc.text(`PHP ${Number(sale.total_amount).toLocaleString('en-US', { minimumFractionDigits: 0 })}`, pageWidth - doc.getTextWidth(`PHP ${Number(sale.total_amount).toLocaleString('en-US', { minimumFractionDigits: 0 })}`) - 14, currentY);
         }
-        if (sale.layaway_plan) {
-          doc.text(
-            `Outstanding Balance: PHP ${Number(sale.outstanding_balance).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
-            14,
-            lastY + 24
-          );
-        }
+
+        // Footer
+        currentY += 20;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.text("No Return/ No Exchange Policy", pageWidth / 2, currentY, { align: 'center' });
+        currentY += 7;
+        doc.text("All sales are final", pageWidth / 2, currentY, { align: 'center' });
+        currentY += 7;
+        doc.text("No refund unless proven fake", pageWidth / 2, currentY, { align: 'center' });
+        currentY += 7;
+        doc.text("We offer lifetime moneyback guarantee on all items.", pageWidth / 2, currentY, { align: 'center' });
+
         doc.save(`transaction-${sale.sale_external_id}.pdf`);
         setIsDownloading(false);
       };
@@ -353,53 +433,169 @@ export default function TransactionDetailPage({
     if (!sale) return;
     const html = `
       <div style="max-width:400px;margin:0 auto;padding:0 0 12px 0;font-family:Arial,sans-serif;color:#222;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
           <img src="/lwlogo.jpg" alt="Luxurywish Logo" style="width:60px;object-fit:contain;" />
-          <div style="font-size:18px;font-weight:700;letter-spacing:1px;color:#222;margin-top:8px;">RECEIPT#${sale?.sale_external_id || ''}</div>
+          <div style="text-align:right;">
+            <div style="font-size:18px;font-weight:700;letter-spacing:1px;color:#222;">RECEIPT</div>
+            <div style="font-size:14px;color:#666;margin-top:2px;">#${sale?.sale_external_id || ''}</div>
+          </div>
         </div>
         <div style="font-size:13px;font-weight:600;margin-bottom:2px;">Luxurywish</div>
-        <div style="font-size:12px;color:#444;line-height:1.3;margin-bottom:2px;">LWPH, Unit 2307, TFT building, BGC Taguig City -</div>
-        <div style="font-size:12px;color:#444;margin-bottom:8px;">www.luxurywishph.com • +639270280001 • @luxurywishph</div>
-        <div style="border-top:2px solid #222;margin:12px 0 8px 0;"></div>
-        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">1 item (Qty.: ${sale?.product?.[0]?.qty || 1})</div>
-        <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+        <div style="font-size:12px;color:#444;line-height:1.3;margin-bottom:2px;">Trade and Financial Tower, BGC Taguig City</div>
+        <div style="font-size:12px;color:#444;margin-bottom:12px;">www.luxurywish.com.ph • IG: @luxurywishph</div>
+        
+        <div style="border-top:2px solid #222;margin:0 0 12px 0;"></div>
+        
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:600;">Date:</div>
+          <div style="font-size:13px;">${sale?.date_purchased ? new Date(sale.date_purchased).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div style="font-size:13px;font-weight:600;">Time:</div>
+          <div style="font-size:13px;">${sale?.date_purchased ? new Date(sale.date_purchased).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+        </div>
+
+        <div style="border-top:1px solid #ddd;margin:0 0 12px 0;"></div>
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Customer Information</div>
+          <div style="font-size:13px;">${sale?.Customer?.name || '-'}</div>
+          <div style="font-size:13px;">${sale?.Customer?.email || '-'}</div>
+          <div style="font-size:13px;">${sale?.Customer?.contact_no || '-'}</div>
+        </div>
+
+        <div style="border-top:1px solid #ddd;margin:0 0 12px 0;"></div>
+        
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">${sale?.product?.length || 1} item${sale?.product?.length > 1 ? 's' : ''}</div>
+        
+        <table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
           <tbody>
-            <tr>
-              <td style="font-weight:700;font-size:14px;padding:2px 0;">Item</td>
-              <td style="text-align:right;font-size:14px;font-weight:600;padding:2px 0;">PHP ${sale?.product?.[0]?.unit_price ? Number(sale.product[0].unit_price).toLocaleString('en-US', { minimumFractionDigits: 0 }) : ''}</td>
-            </tr>
-            <tr>
-              <td style="font-weight:700;font-size:14px;padding:2px 0;">Code</td>
-              <td></td>
-            </tr>
-            <tr>
-              <td style="font-weight:700;font-size:14px;padding:2px 0;">Inclusion</td>
-              <td></td>
-            </tr>
+            ${sale?.product?.map((item: any) => `
+              <tr>
+                <td colspan="2" style="padding:4px 0 2px 0;">
+                  <div style="font-weight:700;font-size:14px;">${item.name}</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="font-size:13px;padding:2px 0;">Code</td>
+                <td style="text-align:right;font-size:13px;padding:2px 0;">${item.code || '-'}</td>
+              </tr>
+              <tr>
+                <td style="font-size:13px;padding:2px 0;">Inclusions</td>
+                <td style="text-align:right;font-size:13px;padding:2px 0;">${item.inclusions || '-'}</td>
+              </tr>
+              <tr>
+                <td style="font-size:13px;padding:2px 0;">Unit Price</td>
+                <td style="text-align:right;font-size:13px;padding:2px 0;">PHP ${Number(item.unit_price).toLocaleString('en-US', { minimumFractionDigits: 0 })}</td>
+              </tr>
+              <tr>
+                <td style="font-size:13px;padding:2px 0;">Quantity</td>
+                <td style="text-align:right;font-size:13px;padding:2px 0;">${item.qty}</td>
+              </tr>
+              <tr>
+                <td style="font-size:13px;padding:2px 0;">Subtotal</td>
+                <td style="text-align:right;font-size:13px;padding:2px 0;font-weight:600;">PHP ${Number(item.subtotal).toLocaleString('en-US', { minimumFractionDigits: 0 })}</td>
+              </tr>
+              <tr><td colspan="2" style="padding:8px 0;"></td></tr>
+            `).join('') || `
+              <tr>
+                <td colspan="2" style="padding:4px 0 2px 0;">
+                  <div style="font-weight:700;font-size:14px;">${sale?.product?.[0]?.name || ''}</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="font-size:13px;padding:2px 0;">Code</td>
+                <td style="text-align:right;font-size:13px;padding:2px 0;">${sale?.product?.[0]?.code || '-'}</td>
+              </tr>
+              <tr>
+                <td style="font-size:13px;padding:2px 0;">Inclusions</td>
+                <td style="text-align:right;font-size:13px;padding:2px 0;">${sale?.product?.[0]?.inclusions || '-'}</td>
+              </tr>
+              <tr>
+                <td style="font-size:13px;padding:2px 0;">Unit Price</td>
+                <td style="text-align:right;font-size:13px;padding:2px 0;">PHP ${sale?.product?.[0]?.unit_price ? Number(sale.product[0].unit_price).toLocaleString('en-US', { minimumFractionDigits: 0 }) : ''}</td>
+              </tr>
+              <tr>
+                <td style="font-size:13px;padding:2px 0;">Quantity</td>
+                <td style="text-align:right;font-size:13px;padding:2px 0;">${sale?.product?.[0]?.qty || 1}</td>
+              </tr>
+            `}
           </tbody>
         </table>
-        <div style="border-top:1.5px solid #222;margin:10px 0 8px 0;"></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-          <div style="font-size:16px;font-weight:700;color:#222;">Total:</div>
-          <div style="font-size:18px;font-weight:700;color:#222;">PHP ${sale?.total_amount ? Number(sale.total_amount).toLocaleString('en-US', { minimumFractionDigits: 0 }) : ''}</div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <div style="font-size:14px;font-weight:600;color:#444;">Cash:</div>
-          <div style="font-size:15px;font-weight:600;color:#444;">PHP ${sale?.total_amount ? Number(sale.total_amount).toLocaleString('en-US', { minimumFractionDigits: 0 }) : ''}</div>
-        </div>
-        <div style="border-top:2px solid #222;margin:14px 0 10px 0;"></div>
+
+        <div style="border-top:1px solid #ddd;margin:0 0 12px 0;"></div>
+        
+        ${sale?.is_discounted ? `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <div style="font-size:14px;color:#666;">Total Price:</div>
+            <div style="font-size:14px;color:#666;text-decoration:line-through;">
+              PHP ${sale.product.reduce((sum: number, item: any) => sum + Number(item.subtotal), 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <div style="font-size:14px;color:#666;">Discount:</div>
+            <div style="font-size:14px;color:#666;">
+              ${sale.discount_percent !== "0.00" 
+                ? `${sale.discount_percent}%` 
+                : `PHP ${Number(sale.discount_flat_rate).toLocaleString('en-US', { minimumFractionDigits: 0 })}`}
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:16px;font-weight:700;color:#222;">Discounted Price:</div>
+            <div style="font-size:16px;font-weight:700;color:#222;">
+              PHP ${Number(sale.total_amount).toLocaleString('en-US', { minimumFractionDigits: 0 })}
+            </div>
+          </div>
+        ` : `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:16px;font-weight:700;color:#222;">Total:</div>
+            <div style="font-size:16px;font-weight:700;color:#222;">
+              PHP ${Number(sale.total_amount).toLocaleString('en-US', { minimumFractionDigits: 0 })}
+            </div>
+          </div>
+        `}
+
+        ${sale?.payment_history && sale.payment_history.length > 0 ? `
+          <div style="border-top:1px solid #ddd;margin:0 0 12px 0;"></div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Payment History</div>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
+            <tbody>
+              ${sale.payment_history.map((ph: any) => `
+                <tr>
+                  <td style="font-size:13px;padding:2px 0;">${ph.payment_date ? new Date(ph.payment_date).toLocaleDateString() : '-'}</td>
+                  <td style="text-align:right;font-size:13px;padding:2px 0;">PHP ${Number(ph.amount).toLocaleString('en-US', { minimumFractionDigits: 0 })}</td>
+                  <td style="text-align:right;font-size:13px;padding:2px 0;">${ph.payment_method}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        ` : ''}
+
+        <div style="border-top:2px solid #222;margin:12px 0;"></div>
+        
         <div style="text-align:center;font-size:13px;color:#222;font-weight:600;line-height:1.4;margin-bottom:2px;">No Return/ No Exchange Policy</div>
         <div style="text-align:center;font-size:13px;color:#222;font-weight:700;">All sales are final</div>
         <div style="text-align:center;font-size:13px;color:#222;font-weight:600;">No refund unless proven fake</div>
         <div style="text-align:center;font-size:13px;color:#222;font-weight:600;">We offer lifetime moneyback guarantee on all items.</div>
-        <div style="text-align:center;font-size:12px;color:#888;margin-top:10px;">${sale?.date_purchased ? new Date(sale.date_purchased).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</div>
       </div>
     `;
+
     const printWindow = window.open('', '', 'height=800,width=600');
+    if (!printWindow) {
+      toast.error('Failed to open print window. Please check your popup settings.');
+      return;
+    }
+
     printWindow.document.write(`
       <html>
         <head>
           <title>Receipt</title>
+          <style>
+            @media print {
+              body { margin: 0; padding: 20px; }
+              @page { margin: 0; }
+            }
+          </style>
         </head>
         <body>${html}</body>
       </html>

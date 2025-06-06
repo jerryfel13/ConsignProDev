@@ -82,7 +82,7 @@ export function useAuth() {
       if (error.response && error.response.status === 401) {
         console.warn('Session already expired or unauthorized.');
       } else {
-        console.error("Logout error:", error);
+      console.error("Logout error:", error);
       }
     } finally {
       // Always clear local storage and redirect
@@ -95,14 +95,14 @@ export function useAuth() {
     try {
       const response = await api.post('/auth/login', { email });
       if (response.data.status.success) {
-        localStorage.setItem("userEmail", email);
+          localStorage.setItem("userEmail", email);
         return Promise.resolve();
-      } else {
+        } else {
         throw new Error(response.data.status.message || "Failed to send OTP");
       }
     } catch (error: any) {
       return Promise.reject(new Error(error.response?.data?.status?.message || "Failed to send OTP"));
-    }
+        }
   };
 
   // Function for verifying OTP
@@ -117,9 +117,9 @@ export function useAuth() {
         localStorage.setItem("token", response.data.access.token);
         localStorage.setItem("userData", JSON.stringify(response.data.data));
         localStorage.setItem("userEmail", response.data.data.email);
-        localStorage.setItem("isAuthenticated", "true");
-        
-        setUser({
+          localStorage.setItem("isAuthenticated", "true");
+          
+          setUser({
           external_id: response.data.data.external_id,
           first_name: response.data.data.first_name,
           last_name: response.data.data.last_name,
@@ -128,45 +128,45 @@ export function useAuth() {
           created_at: response.data.data.created_at,
           last_login: response.data.data.last_login,
           role: response.data.data.role?.name === 'Admin' ? 'admin' : 'user'
-        });
-        
+          });
+          
         return Promise.resolve();
-      } else {
+        } else {
         throw new Error(response.data.status.message || "Invalid verification code");
       }
     } catch (error: any) {
       return Promise.reject(new Error(error.response?.data?.status?.message || "Failed to verify OTP"));
-    }
+        }
   };
 
   // Function for login
   const login = async (credentials: { email: string; password: string }) => {
     setIsLoading(true);
-    try {
+      try {
       const response = await api.post('/auth/login', credentials);
-      const apiUser = response.data.data;
+        const apiUser = response.data.data;
       
-      localStorage.setItem("user_external_id", apiUser.external_id);
-      localStorage.setItem("userData", JSON.stringify(apiUser));
-      localStorage.setItem("userEmail", apiUser.email);
+        localStorage.setItem("user_external_id", apiUser.external_id);
+        localStorage.setItem("userData", JSON.stringify(apiUser));
+        localStorage.setItem("userEmail", apiUser.email);
       
-      setUser({
-        external_id: apiUser.external_id,
-        first_name: apiUser.first_name,
-        last_name: apiUser.last_name,
-        email: apiUser.email,
-        is_active: apiUser.is_active,
-        created_at: apiUser.created_at,
-        last_login: apiUser.last_login,
-        role: apiUser.role?.name === 'Admin' ? 'admin' : 'user',
-      });
+          setUser({
+          external_id: apiUser.external_id,
+          first_name: apiUser.first_name,
+          last_name: apiUser.last_name,
+          email: apiUser.email,
+          is_active: apiUser.is_active,
+          created_at: apiUser.created_at,
+          last_login: apiUser.last_login,
+          role: apiUser.role?.name === 'Admin' ? 'admin' : 'user',
+          });
       
-      setIsLoading(false);
+          setIsLoading(false);
       return Promise.resolve();
     } catch (error: any) {
-      setIsLoading(false);
+          setIsLoading(false);
       return Promise.reject(new Error(error.response?.data?.status?.message || "Invalid credentials"));
-    }
+        }
   };
 
   return {
