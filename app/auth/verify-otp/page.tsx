@@ -26,9 +26,15 @@ function maskEmail(email: string | null): string {
   if (!email) return "your email";
   const [localPart, domain] = email.split("@");
   if (!localPart || !domain || localPart.length < 3) return email;
-  return `${localPart.substring(0, 1)}**********${localPart.substring(
-    localPart.length - 1
-  )}@${domain}`;
+  const visibleCount = 1;
+  const maskedCount = Math.max(localPart.length - 2 * visibleCount, 2);
+  return (
+    localPart.substring(0, visibleCount) +
+    "*".repeat(maskedCount) +
+    localPart.substring(localPart.length - visibleCount) +
+    "@" +
+    domain
+  );
 }
 
 // Helper function to format time

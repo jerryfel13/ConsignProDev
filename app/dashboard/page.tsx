@@ -8,6 +8,11 @@ import {
   Package,
   Users,
   ShoppingCart,
+  UserCircle,
+  PartyPopper,
+  ChevronLeft,
+  ChevronRight,
+  Cake,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -24,6 +29,7 @@ import { RecentClients } from "@/components/recent-clients";
 import { RecentConsignments } from "@/components/recent-consignments";
 import { Overview } from "@/components/overview";
 import { ProductAnalytics } from "@/components/product-analytics";
+import { SalesAnalytics } from "@/components/sales-analytics";
 import axios from "axios";
 import dayjs from "dayjs";
 
@@ -81,6 +87,9 @@ export default function Home() {
   const [consignmentCountLoading, setConsignmentCountLoading] = useState(true);
   const [consignmentCountError, setConsignmentCountError] = useState<string | null>(null);
 
+  // Add state for selected month (1-12)
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+
   useEffect(() => {
     const fetchClientStats = async () => {
       try {
@@ -105,8 +114,7 @@ export default function Home() {
       setCelebrantsLoading(true);
       setCelebrantsError(null);
       try {
-        const month = new Date().getMonth() + 1;
-        const response = await axios.post('https://lwphsims-uat.up.railway.app/clients/celebrant', { month });
+        const response = await axios.post('https://lwphsims-uat.up.railway.app/clients/celebrant', { month: selectedMonth });
         if (response.data.status.success) {
           setCelebrants(response.data.data);
         } else {
@@ -119,7 +127,7 @@ export default function Home() {
       }
     };
     fetchCelebrants();
-  }, []);
+  }, [selectedMonth]);
 
   useEffect(() => {
     // Fetch product stats
@@ -144,7 +152,7 @@ export default function Home() {
       setConsignedProductStatsLoading(true);
       setConsignedProductStatsError(null);
       try {
-        const response = await axios.get('https://lwphsims-uat.up.railway.app/products/stats/counts?isconsigned=true');
+        const response = await axios.get('https://lwphsims-uat.up.railway.app/products/stats/counts?isConsigned=true');
         if (response.data.status.success) {
           setConsignedProductStats(response.data.data);
         } else {
@@ -250,30 +258,78 @@ export default function Home() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Month Celebrants
-              </CardTitle>
+            <CardHeader className="flex items-center justify-center bg-gray-50 border-b rounded-t-lg py-3 px-4 relative">
+              <button
+                className="absolute left-4 flex items-center justify-center w-8 h-8 rounded-full bg-white border hover:bg-gray-100 transition disabled:opacity-50"
+                onClick={() => setSelectedMonth(m => m === 1 ? 12 : m - 1)}
+                aria-label="Previous Month"
+                type="button"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <span className="font-bold text-base sm:text-lg tracking-wide">
+                {dayjs().month(selectedMonth - 1).format('MMMM')} Celebrants
+              </span>
+              <button
+                className="absolute right-4 flex items-center justify-center w-8 h-8 rounded-full bg-white border hover:bg-gray-100 transition disabled:opacity-50"
+                onClick={() => setSelectedMonth(m => m === 12 ? 1 : m + 1)}
+                aria-label="Next Month"
+                type="button"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
             </CardHeader>
-            <CardContent className="flex flex-col h-32 justify-between">
+            <CardContent className="flex flex-col h-40 justify-between p-4">
               {celebrantsLoading ? (
                 <div className="text-xs text-muted-foreground">Loading...</div>
               ) : celebrantsError ? (
                 <div className="text-xs text-red-500">{celebrantsError}</div>
               ) : celebrants.length === 0 ? (
-                <div className="text-xs text-muted-foreground">No celebrants this month.</div>
+                <div className="flex flex-col items-center text-muted-foreground py-6">
+                  <PartyPopper className="w-8 h-8 mb-2" />
+                  <span>No celebrants this month.</span>
+                </div>
               ) : (
-                <ul className="text-xs space-y-1">
-                  {celebrants.map((c) => (
-                    <li key={c.id}>
-                      {c.first_name} {c.last_name} - {dayjs(c.birth_date).format('MMM D')}
-                    </li>
-                  ))}
+                <ul className="divide-y divide-gray-200">
+                  {celebrants.map((c) => {
+                    const realCurrentMonth = new Date().getMonth() + 1;
+                    const isBirthdayMonth = dayjs(c.birth_date).month() + 1 === realCurrentMonth;
+                    return (
+                      <li key={c.id} className="flex items-center gap-3 py-2">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                            {c.avatarUrl ? (
+                              <img src={c.avatarUrl} alt={c.first_name} className="w-8 h-8 rounded-full object-cover" />
+                            ) : (
+                              <span className="font-bold text-base">
+                                {c.first_name?.[0] || ''}{c.last_name?.[0] || ''}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0 flex items-center gap-2">
+                          <div className="font-semibold truncate">{c.first_name} {c.last_name}</div>
+                          {isBirthdayMonth && <Cake className="w-4 h-4 text-pink-500" />}
+                        </div>
+                        <div className="text-xs text-muted-foreground">{dayjs(c.birth_date).format('MMM D')}</div>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </CardContent>
           </Card>
         </div>
+
+        <Card className="col-span-full overflow-hidden">
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle>Sales Analytics</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <SalesAnalytics />
+          </CardContent>
+        </Card>
+
         <div className="grid gap-4">
           <Card className="col-span-full overflow-hidden">
             <CardHeader className="px-4 sm:px-6">

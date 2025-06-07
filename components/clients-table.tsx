@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { toast } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 import {
   type ColumnDef,
   flexRender,
@@ -21,7 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -42,8 +43,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ItemsTable } from "@/components/items-table";
-import { ItemForm } from "@/components/item-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddClientModal } from "./add-client-modal";
 import axios from "axios";
@@ -66,7 +65,85 @@ const formatCurrency = (amount: string | number) => {
   }).format(numericValue);
 };
 
-const columns: ColumnDef<any>[] = [
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  status: string;
+  isConsignor: boolean;
+  totalValue: string;
+}
+
+interface ClientsTableProps {
+  initialClients: Client[];
+  error?: string;
+  loading?: boolean;
+  onAddClient: () => void;
+}
+
+export function ClientsTable({ initialClients, error, loading = false, onAddClient }: ClientsTableProps) {
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [rowSelection, setRowSelection] = useState({});
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [searchType, setSearchType] = useState<"name" | "contact" | "id">("name");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<string | null>(null);
+
+  // Add retry effect
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+      }, 3000); // Retry every 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [error, retryCount]);
+
+  const handleDeleteClient = async (clientId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("No authentication token found. Please log in again.");
+        return;
+      }
+
+      const response = await axios.delete(`${API_BASE_URL}/clients/${clientId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        data: {
+          deleted_by: "admin_client"
+        }
+      });
+
+      if (response.data.status?.success) {
+        // Refresh the clients list
+        window.location.reload();
+      } else {
+        // Handle specific error messages
+        if (response.data.status?.message === "Cannot delete: existing transactions found.") {
+          toast.error("This client cannot be deleted because they have existing transactions. Please review their transaction history first.");
+        } else {
+          toast.error(response.data.status?.message);
+        }
+      }
+    } catch (error: any) {
+      if (error.response?.data?.status?.message === "Cannot delete: existing transactions found.") {
+        toast.error("This client cannot be deleted because they have existing transactions. Please review their transaction history first.");
+      } else if (error.response?.data?.status?.message) {
+        toast.error(error.response.data.status.message);
+      } else {
+        toast.error("An unexpected error occurred");
+      }
+    }
+  };
+
+  const columns: ColumnDef<Client>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -187,48 +264,11 @@ const columns: ColumnDef<any>[] = [
                 <span>View Transactions</span>
               </Link>
             </DropdownMenuItem>
-            {client.isConsignor ? (
-              <>
-                <DropdownMenuItem>
-                  <Link
-                    href={`/clients/${client.id}/consignments`}
-                    className="flex items-center"
-                  >
-                    <span>View Consignments</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link
-                    href={`/inventory/new?consignorId=${client.id}&isConsigned=true&from=clients`}
-                    className="flex items-center"
-                  >
-                    <span>Add Consignment</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link
-                    href={`/sales/record-sales?clientId=${client.id}&from=clients`}
-                    className="flex items-center"
-                  >
-                    <span>Add Purchase Item</span>
-                  </Link>
-                </DropdownMenuItem>
-              </>
-            ) : (
-              <DropdownMenuItem>
-                <Link
-                  href={`/sales/record-sales?clientId=${client.id}&from=clients`}
-                  className="flex items-center"
-                >
-                  <span>Add Purchase Item</span>
-                </Link>
-              </DropdownMenuItem>
-            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
-                // Add deactivate client functionality here
-                console.log(`Deactivate client: ${client.id}`);
+                  setClientToDelete(client.id);
+                  setShowDeleteConfirm(true);
               }}
               className="text-red-600"
             >
@@ -240,40 +280,6 @@ const columns: ColumnDef<any>[] = [
     },
   },
 ];
-
-interface Client {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  // Add other client properties as needed
-}
-
-interface ClientsTableProps {
-  initialClients: Client[];
-  error?: string;
-  loading?: boolean;
-  onAddClient: () => void;
-}
-
-export function ClientsTable({ initialClients, error, loading = false, onAddClient }: ClientsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [rowSelection, setRowSelection] = useState({});
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [searchType, setSearchType] = useState<"name" | "contact" | "id">("name");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-
-  // Add retry effect
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => {
-        setRetryCount(prev => prev + 1);
-      }, 3000); // Retry every 3 seconds
-      return () => clearTimeout(timer);
-    }
-  }, [error, retryCount]);
 
   const table = useReactTable({
     data: initialClients,
@@ -349,7 +355,7 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
                       : "Search ID..."
                   }
                   value={globalFilter}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  onChange={(e) => {
                     const value = e.target.value;
                     setGlobalFilter(value);
                     table.setGlobalFilter(value);
@@ -388,8 +394,7 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      return (
+                    {headerGroup.headers.map((header) => (
                         <TableHead key={header.id}>
                           {header.isPlaceholder
                             ? null
@@ -398,8 +403,7 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
                                 header.getContext()
                               )}
                         </TableHead>
-                      );
-                    })}
+                    ))}
                   </TableRow>
                 ))}
               </TableHeader>
@@ -472,6 +476,57 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && clientToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 w-[90vw] max-w-sm flex flex-col items-center">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-3">
+              <svg
+                className="w-6 h-6 text-red-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+            </div>
+            <h4 className="text-center font-medium text-lg text-gray-900 mb-1">
+              Confirm Delete
+            </h4>
+            <p className="text-center text-gray-600 mb-4">
+              Are you sure you want to delete this client? This action cannot be undone.
+            </p>
+            <div className="flex w-full gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setClientToDelete(null);
+                }}
+                className="flex-1 py-2 border border-gray-300 text-gray-500 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  handleDeleteClient(clientToDelete);
+                  setClientToDelete(null);
+                }}
+                className="flex-1 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

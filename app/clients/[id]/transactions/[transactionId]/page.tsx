@@ -302,19 +302,12 @@ export default function TransactionDetailPage({
         doc.text("Date:", 14, currentY);
         doc.setFont("helvetica", "normal");
         doc.text(sale.date_purchased ? new Date(sale.date_purchased).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '-', pageWidth - doc.getTextWidth(sale.date_purchased ? new Date(sale.date_purchased).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '-') - 14, currentY);
-        
-        currentY += 7;
-        doc.setFont("helvetica", "bold");
-        doc.text("Time:", 14, currentY);
-        doc.setFont("helvetica", "normal");
-        doc.text(sale.date_purchased ? new Date(sale.date_purchased).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-', pageWidth - doc.getTextWidth(sale.date_purchased ? new Date(sale.date_purchased).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-') - 14, currentY);
 
         // Customer Information
-        currentY += 15;
+        currentY += 7;
         doc.setFont("helvetica", "bold");
         doc.text("Customer Information", 14, currentY);
         currentY += 7;
-        doc.setFont("helvetica", "normal");
         doc.text(sale.Customer?.name || '-', 14, currentY);
         currentY += 7;
         doc.text(sale.Customer?.email || '-', 14, currentY);
@@ -449,10 +442,6 @@ export default function TransactionDetailPage({
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div style="font-size:13px;font-weight:600;">Date:</div>
           <div style="font-size:13px;">${sale?.date_purchased ? new Date(sale.date_purchased).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}</div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <div style="font-size:13px;font-weight:600;">Time:</div>
-          <div style="font-size:13px;">${sale?.date_purchased ? new Date(sale.date_purchased).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
         </div>
 
         <div style="border-top:1px solid #ddd;margin:0 0 12px 0;"></div>
