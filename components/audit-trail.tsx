@@ -144,7 +144,7 @@ export default function AuditTrail() {
 
   // Render
   return (
-    <Card className="mt-8 max-w-5xl mx-auto shadow-xl border border-gray-200">
+    <Card className="mt-8 w-full max-w-5xl mx-auto shadow-xl border border-gray-200">
       <CardHeader className="pb-2 border-b border-gray-100">
         <CardTitle className="text-2xl font-bold tracking-tight">Audit Trail / Activity Logs</CardTitle>
       </CardHeader>
@@ -154,7 +154,7 @@ export default function AuditTrail() {
           <span className="font-semibold text-lg">Filter Logs</span>
         </div>
         <section
-          className="bg-gray-50 rounded-lg shadow-sm p-4 md:p-8 mb-6 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-end"
+          className="bg-gray-50 rounded-lg shadow-sm p-4 md:p-8 mb-6 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-end w-full"
           aria-label="Audit Trail Filters"
         >
           <div className="md:col-span-3 flex flex-col gap-1">
@@ -223,8 +223,8 @@ export default function AuditTrail() {
         <Separator className="mb-6" />
         <section className="w-full">
           <div className="overflow-x-auto rounded-md border border-gray-100">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-100 sticky top-0 z-10">
+            <table className="min-w-[900px] w-full divide-y divide-gray-200">
+              <thead className="bg-gray-100">
                 <tr>
                   {columns.map((col, idx) => (
                     <th
@@ -288,6 +288,7 @@ export default function AuditTrail() {
                         handlePageChange(page - 1);
                       }}
                       aria-disabled={page === 1}
+                      className={page === 1 ? 'pointer-events-none opacity-50' : ''}
                     />
                   </PaginationItem>
                   {Array.from({ length: totalPages }).map((_, idx) => (
@@ -312,6 +313,7 @@ export default function AuditTrail() {
                         handlePageChange(page + 1);
                       }}
                       aria-disabled={page === totalPages}
+                      className={page === totalPages ? 'pointer-events-none opacity-50' : ''}
                     />
                   </PaginationItem>
                 </PaginationContent>
