@@ -253,6 +253,11 @@ export default function InventoryPage() {
   const filteredProducts = products;
 
   const handleDeleteClick = (stock_external_id: string) => {
+    const userExternalId = typeof window !== 'undefined' ? localStorage.getItem("user_external_id") : null;
+    if (!userExternalId) {
+      toast.error("User ID not found. Please log in again.");
+      return;
+    }
     setDeleteId(stock_external_id);
     setShowDeleteModal(true);
   };
@@ -288,7 +293,7 @@ export default function InventoryPage() {
           </div>,
           {
             position: "top-center",
-            duration: 2000,
+            autoClose: 2000,
             className: "!bg-transparent !shadow-none !p-0 !rounded-none",
           }
         );

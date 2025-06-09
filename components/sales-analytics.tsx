@@ -153,13 +153,13 @@ export function SalesAnalytics() {
         Cancelled: parseFloat(stats.totalCancelledSales.yesterdayAmount),
       },
       {
-        name: "This Week",
+        name: "Last Week",
         Paid: parseFloat(stats.totalPaidSales.lastWeekAmount),
         Pending: parseFloat(stats.totalPendingSales.lastWeekAmount),
         Cancelled: parseFloat(stats.totalCancelledSales.lastWeekAmount),
       },
       {
-        name: "This Month",
+        name: "Last Month",
         Paid: parseFloat(stats.totalPaidSales.lastMonthAmount),
         Pending: parseFloat(stats.totalPendingSales.lastMonthAmount),
         Cancelled: parseFloat(stats.totalCancelledSales.lastMonthAmount),
@@ -289,7 +289,7 @@ export function SalesAnalytics() {
               {stats?.totalPaidSales.totalCount || "0"} transactions
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              +{stats?.totalPaidSales.todayCount || "0"} today, +{stats?.totalPaidSales.yesterdayCount || "0"} yesterday, +{stats?.totalPaidSales.lastWeekCount || "0"} week, +{stats?.totalPaidSales.lastMonthCount || "0"} month, +{stats?.totalPaidSales.lastYearCount || "0"} year
+              +{stats?.totalPaidSales.todayCount || "0"} today, +{stats?.totalPaidSales.yesterdayCount || "0"} yesterday, +{stats?.totalPaidSales.lastWeekCount || "0"} last week, +{stats?.totalPaidSales.lastMonthCount || "0"} last month, +{stats?.totalPaidSales.lastYearCount || "0"} last year
             </div>
           </CardContent>
         </Card>
@@ -304,7 +304,7 @@ export function SalesAnalytics() {
               {stats?.totalPendingSales.totalCount || "0"} transactions
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              +{stats?.totalPendingSales.todayCount || "0"} today, +{stats?.totalPendingSales.yesterdayCount || "0"} yesterday, +{stats?.totalPendingSales.lastWeekCount || "0"} week, +{stats?.totalPendingSales.lastMonthCount || "0"} month, +{stats?.totalPendingSales.lastYearCount || "0"} year
+              +{stats?.totalPendingSales.todayCount || "0"} today, +{stats?.totalPendingSales.yesterdayCount || "0"} yesterday, +{stats?.totalPendingSales.lastWeekCount || "0"} last week, +{stats?.totalPendingSales.lastMonthCount || "0"} last month, +{stats?.totalPendingSales.lastYearCount || "0"} last year
             </div>
           </CardContent>
         </Card>
@@ -319,7 +319,7 @@ export function SalesAnalytics() {
               {stats?.totalCancelledSales.totalCount || "0"} transactions
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              +{stats?.totalCancelledSales.todayCount || "0"} today, +{stats?.totalCancelledSales.yesterdayCount || "0"} yesterday, +{stats?.totalCancelledSales.lastWeekCount || "0"} week, +{stats?.totalCancelledSales.lastMonthCount || "0"} month, +{stats?.totalCancelledSales.lastYearCount || "0"} year
+              +{stats?.totalCancelledSales.todayCount || "0"} today, +{stats?.totalCancelledSales.yesterdayCount || "0"} yesterday, +{stats?.totalCancelledSales.lastWeekCount || "0"} last week, +{stats?.totalCancelledSales.lastMonthCount || "0"} last month, +{stats?.totalCancelledSales.lastYearCount || "0"} last year
             </div>
           </CardContent>
         </Card>

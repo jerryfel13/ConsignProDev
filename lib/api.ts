@@ -119,52 +119,5 @@ export const clientApi = {
   },
 };
 
-// Debug function to test product creation API
-export async function debugCreateProduct() {
-  try {
-    const response = await fetch('https://lwphsims-uat.up.railway.app/products', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        category_ext_id: "U0vVtwrZQt",
-        brand_ext_id: "FP5Llawmk9",
-        name: "Sample Product",
-        material: "Leather",
-        hardware: "Metal",
-        code: "PRD123",
-        measurement: "10x20",
-        model: "Model-X",
-        auth_ext_id: "7sALGjWK6F",
-        inclusion: ["Dust Bag", "Box"],
-        images: ["img1.jpg", "img2.jpg"],
-        condition: {
-          interior: "8",
-          exterior: "9",
-          overall: "96",
-          description: "Minor scratches on the frame"
-        },
-        stock: {
-          min_qty: 1,
-          qty_in_stock: 10
-        },
-        cost: 0,
-        price: 180000,
-        is_consigned: true,
-        consignor_ext_id: "IB5nTFD6d6",
-        consignor_selling_price: 140000,
-        consigned_date: "2025-04-01",
-        created_by: "admin_user"
-      })
-    });
-    const data = await response.json();
-    console.log('Product creation response:', data);
-    return data;
-  } catch (error) {
-    console.error('Product creation error:', error);
-    throw error;
-  }
-}
 
 export default api; 

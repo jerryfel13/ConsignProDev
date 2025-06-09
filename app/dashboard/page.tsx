@@ -332,18 +332,7 @@ export default function Home() {
         <CustomerFrequencyAnalytics />
 
         <div className="grid gap-4">
-          <Card className="col-span-full overflow-hidden">
-            <CardHeader className="px-4 sm:px-6">
-              <CardTitle>Overview</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="w-full overflow-x-auto">
-                <div className="min-w-[400px] w-full">
-                  <Overview />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Overview card removed as it is not using real data */}
         </div>
       </main>
     </div>
