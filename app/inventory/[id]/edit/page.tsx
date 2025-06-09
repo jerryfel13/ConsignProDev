@@ -158,7 +158,7 @@ export default function EditProductPage() {
     consignor_ext_id: "",
     consignor_selling_price: 0,
     consigned_date: "",
-    updated_by: "admin_user", // This should come from your auth system
+    updated_by: "r", // This should come from your auth system
   });
   const [uploadingImages, setUploadingImages] = useState(false);
   const [pendingImages, setPendingImages] = useState<File[]>([]);
@@ -232,6 +232,11 @@ export default function EditProductPage() {
           if (productData.consignor_selling_price) {
             setConsignorPriceDisplay(formatCurrency(Number(productData.consignor_selling_price)));
           }
+          const userExternalId = typeof window !== 'undefined' ? localStorage.getItem("user_external_id") : null;
+          if (!userExternalId) {
+            toast.error("User ID not found. Please log in again.");
+            return;
+          }
           setFormData({
             category_ext_id: productData.category.code,
             brand_ext_id: productData.brand.code,
@@ -256,7 +261,7 @@ export default function EditProductPage() {
             consignor_ext_id: productData.consignor?.code || "",
             consignor_selling_price: productData.consignor_selling_price ? Number(productData.consignor_selling_price) : undefined,
             consigned_date: productData.consigned_date?.split('T')[0] || "",
-            updated_by: "admin_user", // This should come from your auth system
+            updated_by: userExternalId,
           });
 
           // Log the mapped data for verification
@@ -319,6 +324,12 @@ export default function EditProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const userExternalId = typeof window !== 'undefined' ? localStorage.getItem("user_external_id") : null;
+    if (!userExternalId) {
+      toast.error("User ID not found. Please log in again.");
+      setIsSaving(false);
+      return;
+    }
     try {
       setIsSaving(true);
 
@@ -338,14 +349,6 @@ export default function EditProductPage() {
           setIsSaving(false);
           return;
         }
-      }
-
-      // Get logged-in user's external ID
-      const userExternalId = typeof window !== 'undefined' ? localStorage.getItem("user_external_id") : null;
-      if (!userExternalId) {
-        toast.error("User ID not found. Please log in again.");
-        setIsSaving(false);
-        return;
       }
 
       // First, upload any pending images to Cloudinary

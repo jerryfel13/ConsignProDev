@@ -183,6 +183,15 @@ export function SiteHeader() {
                       <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="dropdown-menu-item">
+                    <Link
+                      href="/audit-trail"
+                      className="flex items-center text-black w-full"
+                    >
+                      <Repeat className="mr-2 h-4 w-4 text-gray-700" />
+                      <span>Audit Trail</span>
+                    </Link>
+                  </DropdownMenuItem>
                   {user?.role?.name === 'Admin' && (
                     <>
                       <DropdownMenuSeparator />

@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import {
   Select,
   SelectContent,
@@ -259,12 +259,17 @@ export default function InventoryPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deleteId) return;
+    const userExternalId = typeof window !== 'undefined' ? localStorage.getItem("user_external_id") : null;
+    if (!userExternalId) {
+      toast.error("User ID not found. Please log in again.");
+      return;
+    }
     setShowDeleteModal(false);
     setDeletingId(deleteId);
     try {
       const response = await axios.delete(
         `https://lwphsims-uat.up.railway.app/products/id/${deleteId}`,
-        { data: { deleted_by: "admin_user" } }
+        { data: { deleted_by: userExternalId } }
       );
       if (response.data.status.success) {
         toast(
@@ -289,10 +294,23 @@ export default function InventoryPage() {
         );
         setProducts((prev) => prev.filter((p) => p.stock_external_id !== deleteId));
       } else {
-        toast.error(response.data.status.message || "Failed to delete product.");
+        if (response.data.status?.message === "Cannot delete: existing transactions found.") {
+          toast.error("This product cannot be deleted because it has related sales transactions.");
+        } else {
+          toast.error(response.data.status?.message || "Failed to delete product.");
+        }
       }
-    } catch (error) {
-      toast.error("An error occurred while deleting the product.");
+    } catch (error: any) {
+      const backendMsg =
+        error.response?.data?.status?.message ||
+        (typeof error.response?.data === "string" ? error.response.data : undefined);
+      if (error.response?.data?.status?.message === "Cannot delete: existing transactions found.") {
+        toast.error("This product cannot be deleted because it has related sales transactions.");
+      } else if (backendMsg) {
+        toast.error(backendMsg);
+      } else {
+        toast.error("An error occurred while deleting the product.");
+      }
     } finally {
       setDeletingId(null);
       setDeleteId(null);

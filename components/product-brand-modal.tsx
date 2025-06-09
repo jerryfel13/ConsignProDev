@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "react-hot-toast";
 
 interface ProductBrandModalProps {
   isOpen: boolean;
@@ -26,6 +27,12 @@ export function ProductBrandModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const userExternalId = typeof window !== 'undefined' ? localStorage.getItem("user_external_id") : null;
+  if (!userExternalId) {
+    toast.error("User ID not found. Please log in again.");
+    return;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -36,7 +43,7 @@ export function ProductBrandModal({
         "https://lwphsims-uat.up.railway.app/products/brands",
         {
           name: brandName,
-          created_by: "admin_user", // This should be replaced with the actual logged-in user
+          created_by: userExternalId,
         }
       );
 

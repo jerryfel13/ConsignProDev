@@ -5,6 +5,7 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { X, Tag, Upload, Save } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -106,6 +107,9 @@ export function AddConsignmentModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
+  // Get logged-in user's external ID
+  const userExternalId = typeof window !== 'undefined' ? localStorage.getItem("user_external_id") : null;
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema) as any,
     // Default values set here, potentially overridden by initialClientId useEffect
@@ -126,7 +130,7 @@ export function AddConsignmentModal({
       reject_reason: "",
       sold_to: "",
       date_sold: "",
-      created_by: "admin", // TODO: Replace with actual user identifier
+      created_by: userExternalId || "", // Use logged-in user's external id
     },
   });
 
@@ -229,6 +233,12 @@ export function AddConsignmentModal({
     };
 
     console.log("Submitting new consignment:", submissionData);
+
+    // In the form submission handler, add a check:
+    if (!userExternalId) {
+      toast.error("User ID not found. Please log in again.");
+      return;
+    }
 
     // Replace with your actual API call
     try {

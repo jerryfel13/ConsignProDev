@@ -111,13 +111,19 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
         return;
       }
 
+      const userExternalId = typeof window !== 'undefined' ? localStorage.getItem("user_external_id") : null;
+      if (!userExternalId) {
+        toast.error("User ID not found. Please log in again.");
+        return;
+      }
+
       const response = await axios.delete(`${API_BASE_URL}/clients/${clientId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         data: {
-          deleted_by: "admin_client"
+          deleted_by: userExternalId
         }
       });
 

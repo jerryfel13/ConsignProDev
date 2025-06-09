@@ -352,7 +352,7 @@ function AddNewItemForm() {
       consignor_ext_id: consignorId || "",
       consignor_selling_price: 0,
       consigned_date: new Date().toISOString().split('T')[0],
-      created_by: "admin_user",
+      created_by: "",
     },
   });
 
@@ -593,7 +593,7 @@ function AddNewItemForm() {
         "https://lwphsims-uat.up.railway.app/products/categories",
         {
           name: category.name,
-          created_by: "admin_user" // This should be replaced with actual logged-in user's ID
+          created_by: userExternalId
         }
       );
 
@@ -627,11 +627,16 @@ function AddNewItemForm() {
 
   const handleAuthenticatorAdded = async (authenticator: { external_id: string; name: string }) => {
     try {
+      if (!userExternalId) {
+        setErrorMessage("User ID not found. Please log in again.");
+        setShowErrorPrompt(true);
+        return;
+      }
       const response = await axios.post(
         "https://lwphsims-uat.up.railway.app/products/authenticators",
         {
           name: authenticator.name,
-          created_by: "admin_user" // This should be replaced with actual logged-in user's ID
+          created_by: userExternalId
         }
       );
 

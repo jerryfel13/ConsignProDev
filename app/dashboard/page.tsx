@@ -28,8 +28,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RecentClients } from "@/components/recent-clients";
 import { RecentConsignments } from "@/components/recent-consignments";
 import { Overview } from "@/components/overview";
-import { ProductAnalytics } from "@/components/product-analytics";
 import { SalesAnalytics } from "@/components/sales-analytics";
+import CustomerFrequencyAnalytics from "@/components/customer-frequency-analytics";
 import axios from "axios";
 import dayjs from "dayjs";
 
@@ -329,16 +329,9 @@ export default function Home() {
             <SalesAnalytics />
           </CardContent>
         </Card>
+        <CustomerFrequencyAnalytics />
 
         <div className="grid gap-4">
-          <Card className="col-span-full overflow-hidden">
-            <CardHeader className="px-4 sm:px-6">
-              <CardTitle>Product Analytics</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <ProductAnalytics />
-            </CardContent>
-          </Card>
           <Card className="col-span-full overflow-hidden">
             <CardHeader className="px-4 sm:px-6">
               <CardTitle>Overview</CardTitle>

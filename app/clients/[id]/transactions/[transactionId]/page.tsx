@@ -121,8 +121,7 @@ export default function TransactionDetailPage({
 
   const handleCancelTransaction = async () => {
     if (!saleId) return;
-    
-    const userExternalId = localStorage.getItem("user_external_id");
+    const userExternalId = typeof window !== 'undefined' ? localStorage.getItem("user_external_id") : null;
     if (!userExternalId) {
       toast.error("User ID not found. Please log in again.");
       return;
@@ -158,8 +157,7 @@ export default function TransactionDetailPage({
 
   const handleExtendDueDate = async () => {
     if (!saleId || !newDueDate) return;
-    
-    const userExternalId = localStorage.getItem("user_external_id");
+    const userExternalId = typeof window !== 'undefined' ? localStorage.getItem("user_external_id") : null;
     if (!userExternalId) {
       toast.error("User ID not found. Please log in again.");
       return;
@@ -308,11 +306,18 @@ export default function TransactionDetailPage({
         doc.setFont("helvetica", "bold");
         doc.text("Customer Information", 14, currentY);
         currentY += 7;
-        doc.text(sale.Customer?.name || '-', 14, currentY);
-        currentY += 7;
-        doc.text(sale.Customer?.email || '-', 14, currentY);
-        currentY += 7;
-        doc.text(sale.Customer?.contact_no || '-', 14, currentY);
+        if (sale.Customer?.name) {
+          doc.text(sale.Customer.name, 14, currentY);
+          currentY += 7;
+        }
+        if (sale.Customer?.email) {
+          doc.text(sale.Customer.email, 14, currentY);
+          currentY += 7;
+        }
+        if (sale.Customer?.contact_no) {
+          doc.text(sale.Customer.contact_no, 14, currentY);
+          currentY += 7;
+        }
 
         // Items
         currentY += 15;
@@ -448,9 +453,9 @@ export default function TransactionDetailPage({
 
         <div style="margin-bottom:12px;">
           <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Customer Information</div>
-          <div style="font-size:13px;">${sale?.Customer?.name || '-'}</div>
-          <div style="font-size:13px;">${sale?.Customer?.email || '-'}</div>
-          <div style="font-size:13px;">${sale?.Customer?.contact_no || '-'}</div>
+          ${sale?.Customer?.name ? `<div style="font-size:13px;">${sale.Customer.name}</div>` : ""}
+          ${sale?.Customer?.email ? `<div style="font-size:13px;">${sale.Customer.email}</div>` : ""}
+          ${sale?.Customer?.contact_no ? `<div style="font-size:13px;">${sale.Customer.contact_no}</div>` : ""}
         </div>
 
         <div style="border-top:1px solid #ddd;margin:0 0 12px 0;"></div>

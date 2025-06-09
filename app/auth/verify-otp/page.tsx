@@ -166,7 +166,7 @@ export default function VerifyOtpPage() {
           </CardTitle>
           <CardDescription>
             Verify your account by entering the 6-digit code we sent to{" "}
-            <span className="font-medium text-gray-800">
+            <span className="font-medium text-gray-800" style={{ fontFamily: "monospace" }}>
               {maskEmail(userEmail)}
             </span>
             .

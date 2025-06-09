@@ -63,6 +63,15 @@ interface SalesStats {
   };
 }
 
+function formatDateLocal(date: Date) {
+  // Force to local midnight
+  const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const year = localDate.getFullYear();
+  const month = String(localDate.getMonth() + 1).padStart(2, '0');
+  const day = String(localDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
@@ -95,7 +104,7 @@ export function SalesAnalytics() {
       try {
         let url = `https://lwphsims-uat.up.railway.app/sales/transaction/stats?mode=${pendingFilter.mode}`;
         if (pendingFilter.dateFrom && pendingFilter.dateTo) {
-          url += `&dateFrom=${pendingFilter.dateFrom.toISOString().slice(0, 10)}&dateTo=${pendingFilter.dateTo.toISOString().slice(0, 10)}`;
+          url += `&dateFrom=${formatDateLocal(pendingFilter.dateFrom)}&dateTo=${formatDateLocal(pendingFilter.dateTo)}`;
         }
         const response = await axios.get(url);
         if (response.data.status.success) {
@@ -123,7 +132,7 @@ export function SalesAnalytics() {
   if (dateFromStr && dateToStr && stats) {
     chartData = [
       {
-        name: `${dateFromStr} to ${dateToStr}`,
+        name: `${formatDateLocal(pendingFilter.dateFrom!)} to ${formatDateLocal(pendingFilter.dateTo!)}`,
         Paid: parseFloat(stats.totalPaidSales.totalAmount),
         Pending: parseFloat(stats.totalPendingSales.totalAmount),
         Cancelled: parseFloat(stats.totalCancelledSales.totalAmount),
@@ -154,6 +163,12 @@ export function SalesAnalytics() {
         Paid: parseFloat(stats.totalPaidSales.lastMonthAmount),
         Pending: parseFloat(stats.totalPendingSales.lastMonthAmount),
         Cancelled: parseFloat(stats.totalCancelledSales.lastMonthAmount),
+      },
+      {
+        name: "Last Year",
+        Paid: parseFloat(stats.totalPaidSales.lastYearAmount),
+        Pending: parseFloat(stats.totalPendingSales.lastYearAmount),
+        Cancelled: parseFloat(stats.totalCancelledSales.lastYearAmount),
       },
     ];
   }
@@ -273,6 +288,9 @@ export function SalesAnalytics() {
             <div className="text-xs text-muted-foreground mt-1">
               {stats?.totalPaidSales.totalCount || "0"} transactions
             </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              +{stats?.totalPaidSales.todayCount || "0"} today, +{stats?.totalPaidSales.yesterdayCount || "0"} yesterday, +{stats?.totalPaidSales.lastWeekCount || "0"} week, +{stats?.totalPaidSales.lastMonthCount || "0"} month, +{stats?.totalPaidSales.lastYearCount || "0"} year
+            </div>
           </CardContent>
         </Card>
 
@@ -285,6 +303,9 @@ export function SalesAnalytics() {
             <div className="text-xs text-muted-foreground mt-1">
               {stats?.totalPendingSales.totalCount || "0"} transactions
             </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              +{stats?.totalPendingSales.todayCount || "0"} today, +{stats?.totalPendingSales.yesterdayCount || "0"} yesterday, +{stats?.totalPendingSales.lastWeekCount || "0"} week, +{stats?.totalPendingSales.lastMonthCount || "0"} month, +{stats?.totalPendingSales.lastYearCount || "0"} year
+            </div>
           </CardContent>
         </Card>
 
@@ -296,6 +317,9 @@ export function SalesAnalytics() {
             <div className="text-2xl font-bold">{formatCurrency(parseFloat(stats?.totalCancelledSales.totalAmount || "0"))}</div>
             <div className="text-xs text-muted-foreground mt-1">
               {stats?.totalCancelledSales.totalCount || "0"} transactions
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              +{stats?.totalCancelledSales.todayCount || "0"} today, +{stats?.totalCancelledSales.yesterdayCount || "0"} yesterday, +{stats?.totalCancelledSales.lastWeekCount || "0"} week, +{stats?.totalCancelledSales.lastMonthCount || "0"} month, +{stats?.totalCancelledSales.lastYearCount || "0"} year
             </div>
           </CardContent>
         </Card>
