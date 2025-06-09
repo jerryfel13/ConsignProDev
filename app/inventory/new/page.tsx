@@ -173,6 +173,7 @@ function AddNewItemForm() {
   const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [userExternalId, setUserExternalId] = useState<string | null>(null);
 
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -322,6 +323,10 @@ function AddNewItemForm() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    setUserExternalId(localStorage.getItem("user_external_id"));
+  }, []);
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -356,10 +361,13 @@ function AddNewItemForm() {
     },
   });
 
-  const router = useRouter();
+  useEffect(() => {
+    if (userExternalId) {
+      form.setValue("created_by", userExternalId);
+    }
+  }, [userExternalId, form]);
 
-  // Get logged-in user's external ID
-  const userExternalId = typeof window !== 'undefined' ? localStorage.getItem("user_external_id") : null;
+  const router = useRouter();
 
   // Update form when consignorId changes
   useEffect(() => {
@@ -691,6 +699,10 @@ function AddNewItemForm() {
     setCostDisplay(formatted);
     form.setValue("cost", raw);
   };
+
+  if (userExternalId === null) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
