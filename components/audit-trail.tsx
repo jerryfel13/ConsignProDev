@@ -26,7 +26,17 @@ import dayjs from "dayjs";
 import { Separator } from "./ui/separator";
 import { Filter as FilterIcon, RefreshCw } from "lucide-react";
 
+interface User {
+  id: number;
+  external_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  is_active: boolean;
+}
+
 const MODULE_OPTIONS = [
+  "All",
   "Authentication",
   "Users",
   "Client",
@@ -68,14 +78,38 @@ export default function AuditTrail() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [userExternalId, setUserExternalId] = useState("");
-  const [module, setModule] = useState("Authentication");
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [module, setModule] = useState("All");
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalNumber, setTotalNumber] = useState(0);
   const [dateError, setDateError] = useState<string | null>(null);
+
+  // Fetch active users
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await axios.get("https://lwphsims-uat.up.railway.app/users", {
+          params: {
+            isActive: "Y",
+            pageNumber: 1,
+            displayPerPage: 100,
+            sortBy: "first_name",
+            orderBy: "asc"
+          }
+        });
+        if (res.data.status.success) {
+          setUsers(res.data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch users:", err);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   useEffect(() => {
     // Date range validation
@@ -88,14 +122,14 @@ export default function AuditTrail() {
       setDateError(null);
     }
     // Only require userExternalId for Product module
-    if (module === 'Product' && !userExternalId) {
+    if (module === 'Product' && !selectedUserId) {
       setLogs([]);
       setError(null);
       return;
     }
     fetchLogs();
     // eslint-disable-next-line
-  }, [userExternalId, module, dateFrom, dateTo, page]);
+  }, [selectedUserId, module, dateFrom, dateTo, page]);
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -105,9 +139,12 @@ export default function AuditTrail() {
         pageNumber: page,
         displayPerPage: PAGE_SIZE,
       };
-      if (module) {
+      if (module && module !== "All") {
         params.module = module;
-        if (userExternalId) params.userExternalId = userExternalId;
+        if (selectedUserId) {
+          const selectedUser = users.find(u => u.id.toString() === selectedUserId);
+          if (selectedUser) params.userExternalId = selectedUser.external_id;
+        }
       }
       if (dateFrom && dateTo) {
         params.dateFrom = dayjs(dateFrom).format("YYYY-MM-DD");
@@ -135,8 +172,8 @@ export default function AuditTrail() {
 
   // Reset filters and show all logs
   const handleReset = () => {
-    setUserExternalId("");
-    setModule("Authentication");
+    setSelectedUserId("");
+    setModule("All");
     setDateFrom(undefined);
     setDateTo(undefined);
     setPage(1);
@@ -158,15 +195,19 @@ export default function AuditTrail() {
           aria-label="Audit Trail Filters"
         >
           <div className="md:col-span-3 flex flex-col gap-1">
-            <label className="block text-xs font-semibold mb-1 text-gray-700" htmlFor="userExternalId">User External ID</label>
-            <Input
-              id="userExternalId"
-              value={userExternalId}
-              onChange={e => setUserExternalId(e.target.value)}
-              placeholder="User External ID"
-              className="w-full px-3 py-2 text-base rounded-md"
-              aria-label="User External ID"
-            />
+            <label className="block text-xs font-semibold mb-1 text-gray-700" htmlFor="user">User</label>
+            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+              <SelectTrigger className="w-full px-3 py-2 text-base rounded-md" id="user" aria-label="Select User">
+                <SelectValue placeholder="Select User" />
+              </SelectTrigger>
+              <SelectContent>
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id.toString()}>
+                    {`${user.first_name} ${user.last_name}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="md:col-span-3 flex flex-col gap-1">
             <label className="block text-xs font-semibold mb-1 text-gray-700" htmlFor="module">Module</label>
@@ -237,9 +278,9 @@ export default function AuditTrail() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {module === 'Product' && !userExternalId ? (
+                {module === 'Product' && !selectedUserId ? (
                   <tr>
-                    <td colSpan={columns.length} className="text-center py-8 text-gray-500">Type user external id</td>
+                    <td colSpan={columns.length} className="text-center py-8 text-gray-500">Select a user</td>
                   </tr>
                 ) : loading ? (
                   <tr>
@@ -273,7 +314,7 @@ export default function AuditTrail() {
               </tbody>
             </table>
           </div>
-          {(module !== 'Product' || userExternalId) && (
+          {(module !== 'Product' || selectedUserId) && (
             <div className="flex flex-col md:flex-row justify-between items-center mt-4 gap-2">
               <div className="text-xs text-muted-foreground mb-2 md:mb-0">
                 Showing {logs.length} of {totalNumber} logs
