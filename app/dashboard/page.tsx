@@ -96,7 +96,7 @@ export default function Home() {
   useEffect(() => {
     const fetchClientStats = async () => {
       try {
-        const response = await axios.get('https://lwphsims-uat.up.railway.app/clients/stats/counts');
+        const response = await axios.get('https://lwphsims-prod.up.railway.app/clients/stats/counts');
         if (response.data.status.success) {
           setClientStats(response.data.data);
         } else {
@@ -117,7 +117,7 @@ export default function Home() {
       setCelebrantsLoading(true);
       setCelebrantsError(null);
       try {
-        const response = await axios.post('https://lwphsims-uat.up.railway.app/clients/celebrant', { month: selectedMonth });
+        const response = await axios.post('https://lwphsims-prod.up.railway.app/clients/celebrant', { month: selectedMonth });
         if (response.data.status.success) {
           setCelebrants(response.data.data);
         } else {
@@ -138,7 +138,7 @@ export default function Home() {
       setProductStatsLoading(true);
       setProductStatsError(null);
       try {
-        const response = await axios.get('https://lwphsims-uat.up.railway.app/products/stats/counts');
+        const response = await axios.get('https://lwphsims-prod.up.railway.app/products/stats/counts');
         if (response.data.status.success) {
           setProductStats(response.data.data);
         } else {
@@ -155,7 +155,7 @@ export default function Home() {
       setConsignedProductStatsLoading(true);
       setConsignedProductStatsError(null);
       try {
-        const response = await axios.get('https://lwphsims-uat.up.railway.app/products/stats/counts?isConsigned=true');
+        const response = await axios.get('https://lwphsims-prod.up.railway.app/products/stats/counts?isConsigned=true');
         if (response.data.status.success) {
           setConsignedProductStats(response.data.data);
         } else {

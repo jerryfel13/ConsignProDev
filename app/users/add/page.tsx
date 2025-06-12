@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import axios from "axios";
 
-const API_URL = "https://lwphsims-uat.up.railway.app/users";
+const API_URL = "https://lwphsims-prod.up.railway.app/users";
 
 export default function AddUserPage() {
   const router = useRouter();

@@ -19,7 +19,7 @@ import { useRouter } from "next/navigation";
 import { getPaginationWindow } from "@/components/ui/pagination-window";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination";
 
-const API_URL = "https://lwphsims-uat.up.railway.app/users";
+const API_URL = "https://lwphsims-prod.up.railway.app/users";
 
 // Add date formatting function
 const formatDate = (dateString: string | null) => {

@@ -198,7 +198,7 @@ export default function ClientDetailPage({
     setLoadingTransactions(true);
     setTransactionsError(null);
     axios
-      .get(`https://lwphsims-uat.up.railway.app/sales/client/${clientId}/transactions`, {
+      .get(`https://lwphsims-prod.up.railway.app/sales/client/${clientId}/transactions`, {
         params: {
           pageNumber: 1,
           displayPerPage: 10,
@@ -229,7 +229,7 @@ export default function ClientDetailPage({
     setLoadingConsignments(true);
     setConsignmentsError(null);
     axios
-      .get(`https://lwphsims-uat.up.railway.app/products/consignor/${clientId}/items`, {
+      .get(`https://lwphsims-prod.up.railway.app/products/consignor/${clientId}/items`, {
         params: {
           pageNumber: 1,
           displayPerPage: 50,

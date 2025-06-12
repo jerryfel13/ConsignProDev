@@ -42,7 +42,7 @@ export default function StockAnalysisPage() {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get("https://lwphsims-uat.up.railway.app/products", {
+        const response = await axios.get("https://lwphsims-prod.up.railway.app/products", {
           params: {
             sortBy: "name",
             orderBy: "asc",

@@ -102,7 +102,7 @@ export function SalesAnalytics() {
       setError(null);
       setApiError(null);
       try {
-        let url = `https://lwphsims-uat.up.railway.app/sales/transaction/stats?mode=${pendingFilter.mode}`;
+        let url = `https://lwphsims-prod.up.railway.app/sales/transaction/stats?mode=${pendingFilter.mode}`;
         if (pendingFilter.dateFrom && pendingFilter.dateTo) {
           url += `&dateFrom=${formatDateLocal(pendingFilter.dateFrom)}&dateTo=${formatDateLocal(pendingFilter.dateTo)}`;
         }

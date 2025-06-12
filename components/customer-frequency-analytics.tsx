@@ -51,7 +51,7 @@ export default function CustomerFrequencyAnalytics() {
     setLoading(true);
     setError(null);
     try {
-      let url = "https://lwphsims-uat.up.railway.app/sales/transaction/frequencies";
+      let url = "https://lwphsims-prod.up.railway.app/sales/transaction/frequencies";
       if (period === "custom" && dateFrom && dateTo) {
         url += `?dateFrom=${formatDateLocal(dateFrom)}&dateTo=${formatDateLocal(dateTo)}`;
       }

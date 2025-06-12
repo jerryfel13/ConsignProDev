@@ -272,7 +272,7 @@ function AddNewItemForm() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get("https://lwphsims-uat.up.railway.app/products/categories");
+        const response = await axios.get("https://lwphsims-prod.up.railway.app/products/categories");
         if (response.data.status.success) {
           setCategories(response.data.data);
         }
@@ -288,7 +288,7 @@ function AddNewItemForm() {
   useEffect(() => {
     const fetchBrands = async () => {
       try {
-        const response = await axios.get("https://lwphsims-uat.up.railway.app/products/brands");
+        const response = await axios.get("https://lwphsims-prod.up.railway.app/products/brands");
         if (response.data.status.success) {
           setBrands(response.data.data);
         }
@@ -305,8 +305,8 @@ function AddNewItemForm() {
     const fetchData = async () => {
       try {
         const [authResponse, consignorsResponse] = await Promise.all([
-          axios.get("https://lwphsims-uat.up.railway.app/products/authenticators"),
-          axios.get("https://lwphsims-uat.up.railway.app/clients?isConsignor=Y")
+          axios.get("https://lwphsims-prod.up.railway.app/products/authenticators"),
+          axios.get("https://lwphsims-prod.up.railway.app/clients?isConsignor=Y")
         ]);
         
         if (authResponse.data.status.success) {
@@ -499,7 +499,7 @@ function AddNewItemForm() {
       }
 
       const response = await axios.post(
-        "https://lwphsims-uat.up.railway.app/products",
+        "https://lwphsims-prod.up.railway.app/products",
         payload
       );
 
@@ -598,7 +598,7 @@ function AddNewItemForm() {
   const handleCategoryAdded = async (category: { external_id: string; name: string }) => {
     try {
       const response = await axios.post(
-        "https://lwphsims-uat.up.railway.app/products/categories",
+        "https://lwphsims-prod.up.railway.app/products/categories",
         {
           name: category.name,
           created_by: userExternalId
@@ -641,7 +641,7 @@ function AddNewItemForm() {
         return;
       }
       const response = await axios.post(
-        "https://lwphsims-uat.up.railway.app/products/authenticators",
+        "https://lwphsims-prod.up.railway.app/products/authenticators",
         {
           name: authenticator.name,
           created_by: userExternalId

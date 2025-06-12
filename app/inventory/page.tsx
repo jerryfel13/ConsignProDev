@@ -138,8 +138,8 @@ export default function InventoryPage() {
     const fetchDropdowns = async () => {
       try {
         const [catResponse, brandResponse] = await Promise.all([
-          axios.get("https://lwphsims-uat.up.railway.app/products/categories"),
-          axios.get("https://lwphsims-uat.up.railway.app/products/brands")
+          axios.get("https://lwphsims-prod.up.railway.app/products/categories"),
+          axios.get("https://lwphsims-prod.up.railway.app/products/brands")
         ]);
         
         if (catResponse.data.status.success) {
@@ -194,7 +194,7 @@ export default function InventoryPage() {
         });
 
         // Fetch products with current filters
-        const response = await axios.get("https://lwphsims-uat.up.railway.app/products", { params });
+        const response = await axios.get("https://lwphsims-prod.up.railway.app/products", { params });
         
         if (response.data.status.success) {
           setProducts(response.data.data);
@@ -223,13 +223,13 @@ export default function InventoryPage() {
       try {
         // Only fetch if the respective card is visible or hasn't been fetched yet
         const [outOfStockResponse, lowStockResponse] = await Promise.all([
-          axios.get("https://lwphsims-uat.up.railway.app/products", { 
+          axios.get("https://lwphsims-prod.up.railway.app/products", { 
             params: { 
               isOutOfStock: 'y',
               displayPerPage: 1 // We only need the count
             } 
           }),
-          axios.get("https://lwphsims-uat.up.railway.app/products", { 
+          axios.get("https://lwphsims-prod.up.railway.app/products", { 
             params: { 
               isLowStock: 'y',
               displayPerPage: 1 // We only need the count
@@ -275,7 +275,7 @@ export default function InventoryPage() {
     setDeletingId(deleteId);
     try {
       const response = await axios.delete(
-        `https://lwphsims-uat.up.railway.app/products/id/${deleteId}`,
+        `https://lwphsims-prod.up.railway.app/products/id/${deleteId}`,
         { data: { deleted_by: userExternalId } }
       );
       if (response.data.status.success) {

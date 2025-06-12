@@ -13,7 +13,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const response = await axios.get('https://lwphsims-uat.up.railway.app/products', {
+    const response = await axios.get('https://lwphsims-prod.up.railway.app/products', {
       headers: {
         Authorization: `Bearer ${token}`,
       },

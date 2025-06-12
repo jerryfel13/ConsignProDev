@@ -221,7 +221,7 @@ export default function EditProductPage() {
     const fetchProduct = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get(`https://lwphsims-uat.up.railway.app/products/id/${id}`);
+        const response = await axios.get(`https://lwphsims-prod.up.railway.app/products/id/${id}`);
         
         if (response.data.status.success) {
           const productData = response.data.data;
@@ -304,10 +304,10 @@ export default function EditProductPage() {
       setLoadingDropdowns(true);
       try {
         const [cat, br, auth, cons] = await Promise.all([
-          axios.get('https://lwphsims-uat.up.railway.app/products/categories'),
-          axios.get('https://lwphsims-uat.up.railway.app/products/brands'),
-          axios.get('https://lwphsims-uat.up.railway.app/products/authenticators'),
-          axios.get('https://lwphsims-uat.up.railway.app/clients?isConsignor=Y')
+          axios.get('https://lwphsims-prod.up.railway.app/products/categories'),
+          axios.get('https://lwphsims-prod.up.railway.app/products/brands'),
+          axios.get('https://lwphsims-prod.up.railway.app/products/authenticators'),
+          axios.get('https://lwphsims-prod.up.railway.app/clients?isConsignor=Y')
         ]);
         setCategories(cat.data.data || []);
         setBrands(br.data.data || []);
@@ -416,7 +416,7 @@ export default function EditProductPage() {
 
       try {
         const response = await axios.put(
-          `https://lwphsims-uat.up.railway.app/products/id/${stockExternalId}`,
+          `https://lwphsims-prod.up.railway.app/products/id/${stockExternalId}`,
           requestData,
           {
             headers: {

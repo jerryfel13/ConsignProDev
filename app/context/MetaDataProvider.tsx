@@ -39,9 +39,9 @@ export function MetaDataProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       try {
         const [cat, br, auth] = await Promise.all([
-          axios.get('https://lwphsims-uat.up.railway.app/products/categories'),
-          axios.get('https://lwphsims-uat.up.railway.app/products/brands'),
-          axios.get('https://lwphsims-uat.up.railway.app/products/authenticators'),
+          axios.get('https://lwphsims-prod.up.railway.app/products/categories'),
+          axios.get('https://lwphsims-prod.up.railway.app/products/brands'),
+          axios.get('https://lwphsims-prod.up.railway.app/products/authenticators'),
         ]);
         setCategories((cat.data.data || []).map((c: any) => ({ code: c.external_id, name: c.name })));
         setBrands((br.data.data || []).map((b: any) => ({ code: b.external_id, name: b.name })));

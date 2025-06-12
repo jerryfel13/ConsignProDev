@@ -28,7 +28,7 @@ export default function ClientConsignmentsPage({
     setLoading(true);
     setError("");
     fetch(
-      `https://lwphsims-uat.up.railway.app/products/consignor/${consignorId}/items?pageNumber=${page}&displayPerPage=10&sortBy=name&orderBy=asc${search ? `&searchValue=${encodeURIComponent(search)}` : ""}`
+      `https://lwphsims-prod.up.railway.app/products/consignor/${consignorId}/items?pageNumber=${page}&displayPerPage=10&sortBy=name&orderBy=asc${search ? `&searchValue=${encodeURIComponent(search)}` : ""}`
     )
       .then((res) => res.json())
       .then((data) => {
