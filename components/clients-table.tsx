@@ -264,12 +264,49 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
             </DropdownMenuItem>
             <DropdownMenuItem>
               <Link
-                href={`/clients/${client.id}/transactions`}
+                href={`/clients/${client.id}/transactions?from=table`}
                 className="flex items-center"
               >
                 <span>View Transactions</span>
               </Link>
             </DropdownMenuItem>
+            {client.isConsignor ? (
+              <>
+                <DropdownMenuItem>
+                  <Link
+                    href={`/clients/${client.id}/consignments`}
+                    className="flex items-center"
+                  >
+                    <span>View Consignments</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Link
+                    href={`/inventory/new?consignorId=${client.id}&isConsigned=true&from=clients`}
+                    className="flex items-center"
+                  >
+                    <span>Add Consignment</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Link
+                    href={`/sales/record-sales?clientId=${client.id}&from=clients`}
+                    className="flex items-center"
+                  >
+                    <span>Add Purchase Item</span>
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <DropdownMenuItem>
+                <Link
+                  href={`/sales/record-sales?clientId=${client.id}&from=clients`}
+                  className="flex items-center"
+                >
+                  <span>Add Purchase Item</span>
+                </Link>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
@@ -398,17 +435,17 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
           <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
+                {table.getHeaderGroups().map((headerGroup: any) => (
                   <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                        <TableHead key={header.id}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </TableHead>
+                    {headerGroup.headers.map((header: any) => (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
                     ))}
                   </TableRow>
                 ))}
@@ -481,6 +518,10 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
       <AddClientModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        onClientAdded={() => {
+          setIsModalOpen(false);
+          // Optionally refresh the clients list here
+        }}
       />
       
       {/* Delete Confirmation Modal */}

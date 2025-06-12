@@ -52,7 +52,7 @@ export default function ClientTransactionsPage({
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
           <h1 className="text-xl sm:text-2xl font-bold w-full sm:w-auto text-center sm:text-left">Transactions</h1>
           <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
-            <Link href={`/clients/${clientId}`}>Back to Client</Link>
+            <Link href={new URLSearchParams(window.location.search).get('from') === 'table' ? '/clients' : `/clients/${clientId}`}>Back to Client</Link>
           </Button>
         </div>
       </div>
