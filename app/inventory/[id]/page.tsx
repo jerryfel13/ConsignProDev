@@ -180,7 +180,7 @@ export default function ItemDetailPage() {
 
   const handleOpenStockModal = () => {
     setStockQty(0);
-    setStockCost(Number(product?.price) || 0);
+    setStockCost(Number(product?.cost) || 0);
     setStockAction('increase');
     setShowStockModal(true);
   };
@@ -383,7 +383,7 @@ export default function ItemDetailPage() {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <label className="block text-sm font-medium mb-1">Price</label>
+                      <label className="block text-sm font-medium mb-1">Cost</label>
                       <div className="relative flex items-center">
                         <Input
                           type="number"

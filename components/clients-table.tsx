@@ -73,6 +73,8 @@ interface Client {
   status: string;
   isConsignor: boolean;
   totalValue: string;
+  instagram?: string;
+  facebook?: string;
 }
 
 interface ApiResponse {
@@ -89,6 +91,8 @@ interface ApiResponse {
     contact_no: string;
     is_consignor: boolean;
     is_active: boolean;
+    instagram?: string;
+    facebook?: string;
   }>;
   meta: {
     page: number;
@@ -174,6 +178,8 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
           status: client.is_active ? "Active" : "Inactive",
           isConsignor: client.is_consignor,
           totalValue: "",
+          instagram: client.instagram,
+          facebook: client.facebook,
         }));
         setClients(formattedClients);
         setTotalPages(response.data.meta.totalPages);
@@ -289,12 +295,56 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
     header: "Phone",
   },
   {
+    accessorKey: "instagram",
+    header: "Instagram",
+    cell: ({ row }) => {
+      const instagram = row.getValue("instagram") as string;
+      return instagram ? (
+        <a
+          href={`https://instagram.com/${instagram}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          {instagram.replace(/^https?:\/\//, '').replace(/^www\./, '')}
+        </a>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      );
+    },
+  },
+  {
+    accessorKey: "facebook",
+    header: "Facebook",
+    cell: ({ row }) => {
+      const facebook = row.getValue("facebook") as string;
+      return facebook ? (
+        <a
+          href={
+            facebook.startsWith('http')
+              ? facebook
+              : facebook.startsWith('www')
+                ? `https://${facebook}`
+                : `https://facebook.com/${facebook}`
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          {facebook.replace(/^https?:\/\//, '').replace(/^www\./, '')}
+        </a>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      );
+    },
+  },
+  {
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {
       const status = row.getValue("status") as string;
       return (
-        <Badge variant={status === "Active" ? "default" : "secondary"}>
+        <Badge variant={status === "Active" ? "default" : "outline"}>
           {status}
         </Badge>
       );
