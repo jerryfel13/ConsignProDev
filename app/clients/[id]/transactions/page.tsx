@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import React, { use, useEffect, useState } from "react";
 import axios from "axios";
+import { getPaginationWindow } from "@/components/ui/pagination-window";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination";
 
 export default function ClientTransactionsPage({
   params,
@@ -144,15 +146,52 @@ export default function ClientTransactionsPage({
               </table>
             </div>
             {/* Pagination Controls */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-2 mt-4 w-full">
-              <span className="text-sm font-medium text-center w-full sm:w-auto">Page {currentPage}</span>
-              <div className="flex gap-2 w-full sm:w-auto justify-center sm:justify-end">
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                  Previous
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={transactions.length < displayPerPage}>
-                  Next
-                </Button>
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-2 mt-4 w-full pb-4">
+              <div className="w-full">
+                <Pagination>
+                  <PaginationContent className="flex flex-wrap justify-center gap-1">
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={e => {
+                          e.preventDefault();
+                          setCurrentPage(p => Math.max(1, p - 1));
+                        }}
+                        aria-disabled={currentPage === 1}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                      />
+                    </PaginationItem>
+                    {getPaginationWindow(currentPage, Math.max(1, Math.ceil(transactions.length / displayPerPage))).map((p, idx) =>
+                      p === '...'
+                        ? <PaginationEllipsis key={"ellipsis-" + idx} />
+                        : (
+                          <PaginationItem key={p}>
+                            <PaginationLink
+                              href="#"
+                              isActive={currentPage === p}
+                              onClick={e => {
+                                e.preventDefault();
+                                setCurrentPage(Number(p));
+                              }}
+                            >
+                              {p}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={e => {
+                          e.preventDefault();
+                          setCurrentPage(p => p + 1);
+                        }}
+                        aria-disabled={transactions.length < displayPerPage}
+                        className={transactions.length < displayPerPage ? 'pointer-events-none opacity-50' : ''}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               </div>
             </div>
           </CardContent>

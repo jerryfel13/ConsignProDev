@@ -21,6 +21,8 @@ import { FileText, Receipt, Search, SlidersHorizontal, ChevronDown, FilePlus2, C
 import Link from "next/link";
 import Image from "next/image";
 import axios from "axios";
+import { getPaginationWindow } from "@/components/ui/pagination-window";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination";
 
 const TABS = [
   { label: "All", value: "all", endpoint: "/sales" },
@@ -456,13 +458,50 @@ export default function SalesPage() {
               </div>
               {/* Pagination controls */}
               <div className="flex flex-col md:flex-row justify-end items-center gap-2 mt-4">
-                <Button variant="outline" size="sm" onClick={handlePrev} disabled={currentPage === 1}>
-                  Previous
-                </Button>
-                <span className="text-sm font-medium">Page {currentPage}</span>
-                <Button variant="outline" size="sm" onClick={handleNext} disabled={sales.length < displayPerPage}>
-                  Next
-                </Button>
+                <Pagination>
+                  <PaginationContent className="flex flex-wrap justify-center gap-1">
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={e => {
+                          e.preventDefault();
+                          handlePrev();
+                        }}
+                        aria-disabled={currentPage === 1}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                      />
+                    </PaginationItem>
+                    {getPaginationWindow(currentPage, Math.ceil(tabCounts[activeTab] / displayPerPage || 1)).map((p, idx) =>
+                      p === '...'
+                        ? <PaginationEllipsis key={"ellipsis-" + idx} />
+                        : (
+                          <PaginationItem key={p}>
+                            <PaginationLink
+                              href="#"
+                              isActive={currentPage === p}
+                              onClick={e => {
+                                e.preventDefault();
+                                setCurrentPage(Number(p));
+                              }}
+                            >
+                              {p}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={e => {
+                          e.preventDefault();
+                          handleNext();
+                        }}
+                        aria-disabled={sales.length < displayPerPage}
+                        className={sales.length < displayPerPage ? 'pointer-events-none opacity-50' : ''}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               </div>
             </>
           )}

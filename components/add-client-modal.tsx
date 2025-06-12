@@ -58,16 +58,18 @@ const formSchema = z.object({
   email: z
     .string()
     .email("Please enter a valid email address")
-    .max(100, "Email must be at most 100 characters"),
+    .max(100, "Email must be at most 100 characters")
+    .optional()
+    .or(z.literal("")),
   contact_no: z
     .string()
-    .max(100, "Contact number must be at most 100 characters")
-    .optional(),
+    .min(1, "Contact number is required")
+    .max(100, "Contact number must be at most 100 characters"),
   address: z.string().optional(),
   instagram: z
     .string()
-    .max(100, "Instagram handle must be at most 100 characters")
-    .optional(),
+    .min(1, "Instagram handle is required")
+    .max(100, "Instagram handle must be at most 100 characters"),
   facebook: z
     .string()
     .max(100, "Facebook profile must be at most 100 characters")
@@ -367,9 +369,7 @@ export function AddClientModal({
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        Email <span className="text-red-500">*</span>
-                      </FormLabel>
+                      <FormLabel>Email (Optional)</FormLabel>
                       <FormControl>
                         <Input
                           type="email"
@@ -386,7 +386,9 @@ export function AddClientModal({
                   name="contact_no"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contact Number (Optional)</FormLabel>
+                      <FormLabel>
+                        Contact Number <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="Enter contact number" {...field} />
                       </FormControl>
@@ -399,7 +401,9 @@ export function AddClientModal({
                   name="instagram"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Instagram (Optional)</FormLabel>
+                      <FormLabel>
+                        Instagram <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Enter Instagram handle"

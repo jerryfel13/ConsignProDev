@@ -438,14 +438,14 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
                 {table.getHeaderGroups().map((headerGroup: any) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header: any) => (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
+                        <TableHead key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
                     ))}
                   </TableRow>
                 ))}

@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Search, Filter, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { getPaginationWindow } from "@/components/ui/pagination-window";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination";
 
 const API_URL = "https://lwphsims-uat.up.railway.app/users";
 
@@ -177,26 +179,56 @@ export default function ManageUsersPage() {
                   )}
                 </tbody>
               </table>
-              <div className="flex justify-between items-center mt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Previous
-                </Button>
+              <div className="flex flex-col md:flex-row justify-between items-center mt-4 gap-2">
                 <span className="text-muted-foreground text-sm">
                   Page {page} of {totalPages}
                 </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  Next
-                </Button>
+                <div className="w-full">
+                  <Pagination>
+                    <PaginationContent className="flex flex-wrap justify-center gap-1">
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={e => {
+                            e.preventDefault();
+                            setPage((p) => Math.max(1, p - 1));
+                          }}
+                          aria-disabled={page === 1}
+                          className={page === 1 ? 'pointer-events-none opacity-50' : ''}
+                        />
+                      </PaginationItem>
+                      {getPaginationWindow(page, totalPages).map((p, idx) =>
+                        p === '...'
+                          ? <PaginationEllipsis key={"ellipsis-" + idx} />
+                          : (
+                            <PaginationItem key={p}>
+                              <PaginationLink
+                                href="#"
+                                isActive={page === p}
+                                onClick={e => {
+                                  e.preventDefault();
+                                  setPage(Number(p));
+                                }}
+                              >
+                                {p}
+                              </PaginationLink>
+                            </PaginationItem>
+                          )
+                      )}
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={e => {
+                            e.preventDefault();
+                            setPage((p) => Math.min(totalPages, p + 1));
+                          }}
+                          aria-disabled={page === totalPages}
+                          className={page === totalPages ? 'pointer-events-none opacity-50' : ''}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
               </div>
             </div>
           )}

@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Save } from "lucide-react";
+import { getPaginationWindow } from "@/components/ui/pagination-window";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination";
 // import { Tabs, Tab } from "@/components/ui/tabs";
 
 type Product = {
@@ -676,67 +678,50 @@ export default function ItemDetailPage() {
               {/* Pagination */}
               {movementMeta && (
                 <div className="flex items-center justify-between mt-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <button
-                      className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={movementPage <= 1}
-                      onClick={() => setMovementPage(1)}
-                    >
-                      First
-                    </button>
-                    <button
-                      className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={movementPage <= 1}
-                      onClick={() => setMovementPage(p => Math.max(1, p - 1))}
-                    >
-                      Previous
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {Array.from({ length: Math.min(5, movementMeta.totalPages) }, (_, i) => {
-                      // Calculate page numbers to show
-                      let pageNum;
-                      if (movementMeta.totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (movementPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (movementPage >= movementMeta.totalPages - 2) {
-                        pageNum = movementMeta.totalPages - 4 + i;
-                      } else {
-                        pageNum = movementPage - 2 + i;
-                      }
-                      
-                      return (
-                        <button
-                          key={pageNum}
-                          className={`px-3 py-1 border rounded ${
-                            movementPage === pageNum
-                              ? 'bg-blue-50 border-blue-500 text-blue-600'
-                              : 'hover:bg-gray-50'
-                          }`}
-                          onClick={() => setMovementPage(pageNum)}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={movementPage >= movementMeta.totalPages}
-                      onClick={() => setMovementPage(p => Math.min(movementMeta.totalPages, p + 1))}
-                    >
-                      Next
-                    </button>
-                    <button
-                      className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={movementPage >= movementMeta.totalPages}
-                      onClick={() => setMovementPage(movementMeta.totalPages)}
-                    >
-                      Last
-                    </button>
-                  </div>
+                  <Pagination>
+                    <PaginationContent className="flex flex-wrap justify-center gap-1">
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={e => {
+                            e.preventDefault();
+                            setMovementPage(p => Math.max(1, p - 1));
+                          }}
+                          aria-disabled={movementPage <= 1}
+                          className={movementPage <= 1 ? 'pointer-events-none opacity-50' : ''}
+                        />
+                      </PaginationItem>
+                      {getPaginationWindow(movementPage, movementMeta.totalPages).map((p, idx) =>
+                        p === '...'
+                          ? <PaginationEllipsis key={"ellipsis-" + idx} />
+                          : (
+                            <PaginationItem key={p}>
+                              <PaginationLink
+                                href="#"
+                                isActive={movementPage === p}
+                                onClick={e => {
+                                  e.preventDefault();
+                                  setMovementPage(Number(p));
+                                }}
+                              >
+                                {p}
+                              </PaginationLink>
+                            </PaginationItem>
+                          )
+                      )}
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={e => {
+                            e.preventDefault();
+                            setMovementPage(p => Math.min(movementMeta.totalPages, p + 1));
+                          }}
+                          aria-disabled={movementPage >= movementMeta.totalPages}
+                          className={movementPage >= movementMeta.totalPages ? 'pointer-events-none opacity-50' : ''}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
                 </div>
               )}
             </div>

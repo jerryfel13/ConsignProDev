@@ -39,6 +39,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getPaginationWindow } from "@/components/ui/pagination-window";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination";
 
 const LOW_STOCK_THRESHOLD = 5;
 
@@ -529,41 +531,51 @@ export default function InventoryPage() {
               <div className="text-sm text-gray-500 text-center sm:text-left">
                 Showing {((pagination.page - 1) * pagination.displayPage) + 1} to {Math.min(pagination.page * pagination.displayPage, pagination.totalNumber)} of {pagination.totalNumber} items
               </div>
-              <div className="flex items-center gap-2 flex-wrap justify-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPagination(p => ({ ...p, page: Math.max(1, p.page - 1) }))}
-                  disabled={pagination.page === 1}
-                  className="min-w-[80px]"
-                >
-                  Previous
-                </Button>
-                <div className="flex items-center gap-1 flex-wrap justify-center">
-                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                    const pageNum = i + 1;
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={pagination.page === pageNum ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setPagination(p => ({ ...p, page: pageNum }))}
-                        className="min-w-[40px]"
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPagination(p => ({ ...p, page: Math.min(p.totalPages, p.page + 1) }))}
-                  disabled={pagination.page === pagination.totalPages}
-                  className="min-w-[80px]"
-                >
-                  Next
-                </Button>
+              <div className="w-full">
+                <Pagination>
+                  <PaginationContent className="flex flex-wrap justify-center gap-1">
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={e => {
+                          e.preventDefault();
+                          setPagination(p => ({ ...p, page: Math.max(1, p.page - 1) }));
+                        }}
+                        aria-disabled={pagination.page === 1}
+                        className={pagination.page === 1 ? 'pointer-events-none opacity-50' : ''}
+                      />
+                    </PaginationItem>
+                    {getPaginationWindow(pagination.page, pagination.totalPages).map((p, idx) =>
+                      p === '...'
+                        ? <PaginationEllipsis key={"ellipsis-" + idx} />
+                        : (
+                          <PaginationItem key={p}>
+                            <PaginationLink
+                              href="#"
+                              isActive={pagination.page === p}
+                              onClick={e => {
+                                e.preventDefault();
+                                setPagination(pg => ({ ...pg, page: Number(p) }));
+                              }}
+                            >
+                              {p}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={e => {
+                          e.preventDefault();
+                          setPagination(p => ({ ...p, page: Math.min(p.totalPages, p.page + 1) }));
+                        }}
+                        aria-disabled={pagination.page === pagination.totalPages}
+                        className={pagination.page === pagination.totalPages ? 'pointer-events-none opacity-50' : ''}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               </div>
             </div>
           </CardContent>

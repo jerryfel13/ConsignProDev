@@ -40,6 +40,13 @@ export default function CustomerFrequencyAnalytics() {
     // eslint-disable-next-line
   }, [period]);
 
+  useEffect(() => {
+    if (period === "thisMonth" && !dateFrom && !dateTo) {
+      fetchData();
+    }
+    // eslint-disable-next-line
+  }, [period, dateFrom, dateTo]);
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);

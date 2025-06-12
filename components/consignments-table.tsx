@@ -43,6 +43,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddConsignmentModal } from "./add-consignment-modal";
+import { getPaginationWindow } from "@/components/ui/pagination-window";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination";
 
 // Utility function to format currency in PHP
 const formatCurrency = (amount: number) => {
@@ -418,23 +420,51 @@ export function ConsignmentsTable() {
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                Next
-              </Button>
+            <div className="w-full">
+              <Pagination>
+                <PaginationContent className="flex flex-wrap justify-center gap-1">
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={e => {
+                        e.preventDefault();
+                        table.previousPage();
+                      }}
+                      aria-disabled={!table.getCanPreviousPage()}
+                      className={!table.getCanPreviousPage() ? 'pointer-events-none opacity-50' : ''}
+                    />
+                  </PaginationItem>
+                  {getPaginationWindow(table.getState().pagination.pageIndex + 1, table.getPageCount()).map((p, idx) =>
+                    p === '...'
+                      ? <PaginationEllipsis key={"ellipsis-" + idx} />
+                      : (
+                        <PaginationItem key={p}>
+                          <PaginationLink
+                            href="#"
+                            isActive={table.getState().pagination.pageIndex + 1 === p}
+                            onClick={e => {
+                              e.preventDefault();
+                              table.setPageIndex(Number(p) - 1);
+                            }}
+                          >
+                            {p}
+                          </PaginationLink>
+                        </PaginationItem>
+                      )
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={e => {
+                        e.preventDefault();
+                        table.nextPage();
+                      }}
+                      aria-disabled={!table.getCanNextPage()}
+                      className={!table.getCanNextPage() ? 'pointer-events-none opacity-50' : ''}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           </div>
           <div className="rounded-md border overflow-x-auto">

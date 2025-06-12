@@ -32,6 +32,7 @@ import { SalesAnalytics } from "@/components/sales-analytics";
 import CustomerFrequencyAnalytics from "@/components/customer-frequency-analytics";
 import axios from "axios";
 import dayjs from "dayjs";
+import { useAuth } from "@/hooks/useAuth";
 
 // Utility function to format currency in PHP
 const formatCurrency = (amount: number) => {
@@ -89,6 +90,8 @@ export default function Home() {
 
   // Add state for selected month (1-12)
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+
+  const { user, isLoading } = useAuth();
 
   useEffect(() => {
     const fetchClientStats = async () => {
@@ -164,27 +167,9 @@ export default function Home() {
         setConsignedProductStatsLoading(false);
       }
     };
-    // Fetch consignment count (reuse client stats endpoint for now, or replace with correct one if available)
-    const fetchConsignmentCount = async () => {
-      setConsignmentCountLoading(true);
-      setConsignmentCountError(null);
-      try {
-        // If you have a specific endpoint for consignment count, replace this URL
-        const response = await axios.get('https://lwphsims-uat.up.railway.app/consignments/stats/counts');
-        if (response.data.status.success) {
-          setConsignmentCount(response.data.data.totalCount);
-        } else {
-          setConsignmentCountError('Failed to fetch consignment count');
-        }
-      } catch (err) {
-        setConsignmentCountError('Failed to fetch consignment count');
-      } finally {
-        setConsignmentCountLoading(false);
-      }
-    };
+   
     fetchProductStats();
     fetchConsignedProductStats();
-    fetchConsignmentCount();
   }, []);
 
   return (
@@ -279,7 +264,7 @@ export default function Home() {
                 <ChevronRight className="w-5 h-5" />
               </button>
             </CardHeader>
-            <CardContent className="flex flex-col h-40 justify-between p-4">
+            <CardContent className="flex flex-col flex-1 min-h-0 justify-between p-4">
               {celebrantsLoading ? (
                 <div className="text-xs text-muted-foreground">Loading...</div>
               ) : celebrantsError ? (
@@ -290,7 +275,10 @@ export default function Home() {
                   <span>No celebrants this month.</span>
                 </div>
               ) : (
-                <ul className="divide-y divide-gray-200">
+                <ul
+                  className="divide-y divide-gray-200 max-h-56 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300"
+                  style={{ minHeight: 0, scrollbarWidth: 'thin' }}
+                >
                   {celebrants.map((c) => {
                     const realCurrentMonth = new Date().getMonth() + 1;
                     const isBirthdayMonth = dayjs(c.birth_date).month() + 1 === realCurrentMonth;
@@ -321,14 +309,16 @@ export default function Home() {
           </Card>
         </div>
 
-        <Card className="col-span-full overflow-hidden">
-          <CardHeader className="px-4 sm:px-6">
-            <CardTitle>Sales Analytics</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4">
-            <SalesAnalytics />
-          </CardContent>
-        </Card>
+        {user?.role?.name === "Admin" && (
+          <Card className="col-span-full overflow-hidden">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle>Sales Analytics</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <SalesAnalytics />
+            </CardContent>
+          </Card>
+        )}
         <CustomerFrequencyAnalytics />
 
         <div className="grid gap-4">

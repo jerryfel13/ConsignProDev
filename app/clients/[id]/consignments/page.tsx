@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState, use } from "react";
 import Image from "next/image";
+import { getPaginationWindow } from "@/components/ui/pagination-window";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination";
 
 export default function ClientConsignmentsPage({
   params,
@@ -166,9 +168,51 @@ export default function ClientConsignmentsPage({
                   <div className="text-sm text-muted-foreground text-center sm:text-left">
                     Showing page {page} of {totalPages} ({totalNumber} items)
                   </div>
-                  <div className="flex gap-2 w-full sm:w-auto justify-center sm:justify-end">
-                    <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Previous</Button>
-                    <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</Button>
+                  <div className="w-full">
+                    <Pagination>
+                      <PaginationContent className="flex flex-wrap justify-center gap-1">
+                        <PaginationItem>
+                          <PaginationPrevious
+                            href="#"
+                            onClick={e => {
+                              e.preventDefault();
+                              setPage(p => Math.max(1, p - 1));
+                            }}
+                            aria-disabled={page === 1}
+                            className={page === 1 ? 'pointer-events-none opacity-50' : ''}
+                          />
+                        </PaginationItem>
+                        {getPaginationWindow(page, totalPages).map((p, idx) =>
+                          p === '...'
+                            ? <PaginationEllipsis key={"ellipsis-" + idx} />
+                            : (
+                              <PaginationItem key={p}>
+                                <PaginationLink
+                                  href="#"
+                                  isActive={page === p}
+                                  onClick={e => {
+                                    e.preventDefault();
+                                    setPage(Number(p));
+                                  }}
+                                >
+                                  {p}
+                                </PaginationLink>
+                              </PaginationItem>
+                            )
+                        )}
+                        <PaginationItem>
+                          <PaginationNext
+                            href="#"
+                            onClick={e => {
+                              e.preventDefault();
+                              setPage(p => Math.min(totalPages, p + 1));
+                            }}
+                            aria-disabled={page === totalPages}
+                            className={page === totalPages ? 'pointer-events-none opacity-50' : ''}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
                   </div>
                 </div>
               </div>

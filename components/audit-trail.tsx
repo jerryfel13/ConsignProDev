@@ -74,6 +74,24 @@ const columns = [
   },
 ];
 
+// Helper for windowed pagination
+function getPaginationWindow(page: number, totalPages: number) {
+  const windowSize = 5;
+  let pages: (number | string)[] = [];
+  if (totalPages <= windowSize) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    if (page <= 3) {
+      pages = [1, 2, 3, 4, 5, '...', totalPages];
+    } else if (page >= totalPages - 2) {
+      pages = [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    } else {
+      pages = [1, '...', page - 1, page, page + 1, '...', totalPages];
+    }
+  }
+  return pages;
+}
+
 export default function AuditTrail() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -191,10 +209,10 @@ export default function AuditTrail() {
           <span className="font-semibold text-lg">Filter Logs</span>
         </div>
         <section
-          className="bg-gray-50 rounded-lg shadow-sm p-4 md:p-8 mb-6 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-end w-full"
+          className="bg-gray-50 rounded-lg shadow-sm p-4 md:p-8 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 md:gap-6 items-end w-full"
           aria-label="Audit Trail Filters"
         >
-          <div className="md:col-span-3 flex flex-col gap-1">
+          <div className="lg:col-span-3 flex flex-col gap-1">
             <label className="block text-xs font-semibold mb-1 text-gray-700" htmlFor="user">User</label>
             <Select value={selectedUserId} onValueChange={setSelectedUserId}>
               <SelectTrigger className="w-full px-3 py-2 text-base rounded-md" id="user" aria-label="Select User">
@@ -209,7 +227,7 @@ export default function AuditTrail() {
               </SelectContent>
             </Select>
           </div>
-          <div className="md:col-span-3 flex flex-col gap-1">
+          <div className="lg:col-span-3 flex flex-col gap-1">
             <label className="block text-xs font-semibold mb-1 text-gray-700" htmlFor="module">Module</label>
             <Select value={module} onValueChange={setModule}>
               <SelectTrigger className="w-full px-3 py-2 text-base rounded-md" id="module" aria-label="Module">
@@ -222,7 +240,7 @@ export default function AuditTrail() {
               </SelectContent>
             </Select>
           </div>
-          <div className="md:col-span-3 flex flex-col gap-1">
+          <div className="lg:col-span-3 flex flex-col gap-1">
             <label className="block text-xs font-semibold mb-1 text-gray-700" htmlFor="dateFrom">Date From</label>
             <Input
               id="dateFrom"
@@ -234,7 +252,7 @@ export default function AuditTrail() {
               max={dateTo ? dayjs(dateTo).format('YYYY-MM-DD') : undefined}
             />
           </div>
-          <div className="md:col-span-3 flex flex-col gap-1">
+          <div className="lg:col-span-3 flex flex-col gap-1">
             <label className="block text-xs font-semibold mb-1 text-gray-700" htmlFor="dateTo">Date To</label>
             <Input
               id="dateTo"
@@ -247,9 +265,9 @@ export default function AuditTrail() {
             />
           </div>
           {dateError && (
-            <div className="md:col-span-12 text-red-500 text-sm mt-1">{dateError}</div>
+            <div className="col-span-full text-red-500 text-sm mt-1">{dateError}</div>
           )}
-          <div className="md:col-span-12 flex gap-2 mt-2 md:mt-4 justify-end">
+          <div className="col-span-full flex gap-2 mt-2 md:mt-4 justify-end">
             <Button
               variant="default"
               onClick={handleReset}
@@ -263,14 +281,14 @@ export default function AuditTrail() {
         </section>
         <Separator className="mb-6" />
         <section className="w-full">
-          <div className="overflow-x-auto rounded-md border border-gray-100">
-            <table className="min-w-[900px] w-full divide-y divide-gray-200">
+          <div className="rounded-md border border-gray-100 overflow-x-auto shadow-sm sm:shadow-md">
+            <table className="w-full min-w-[600px] sm:min-w-full divide-y divide-gray-200 rounded-md overflow-hidden text-xs sm:text-sm">
               <thead className="bg-gray-100">
                 <tr>
                   {columns.map((col, idx) => (
                     <th
                       key={col.accessorKey || idx}
-                      className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap"
+                      className="px-2 sm:px-4 py-2 sm:py-3 text-left font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap text-xs sm:text-xs"
                     >
                       {col.header}
                     </th>
@@ -303,7 +321,7 @@ export default function AuditTrail() {
                       {columns.map((col, colIdx) => (
                         <td
                           key={col.accessorKey || colIdx}
-                          className="px-4 py-3 text-sm text-gray-800 whitespace-nowrap"
+                          className="px-2 sm:px-4 py-2 sm:py-3 text-gray-800 whitespace-nowrap text-xs sm:text-sm"
                         >
                           {typeof col.cell === 'function' ? col.cell({ getValue: (k: string) => row[k] }) : row[col.accessorKey]}
                         </td>
@@ -313,52 +331,61 @@ export default function AuditTrail() {
                 )}
               </tbody>
             </table>
+            {/* Mobile scroll hint */}
+            <div className="block sm:hidden text-center text-gray-400 text-xs mt-1 mb-2">Scroll horizontally to see more &rarr;</div>
           </div>
           {(module !== 'Product' || selectedUserId) && (
-            <div className="flex flex-col md:flex-row justify-between items-center mt-4 gap-2">
+            <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-2">
               <div className="text-xs text-muted-foreground mb-2 md:mb-0">
                 Showing {logs.length} of {totalNumber} logs
               </div>
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      onClick={e => {
-                        e.preventDefault();
-                        handlePageChange(page - 1);
-                      }}
-                      aria-disabled={page === 1}
-                      className={page === 1 ? 'pointer-events-none opacity-50' : ''}
-                    />
-                  </PaginationItem>
-                  {Array.from({ length: totalPages }).map((_, idx) => (
-                    <PaginationItem key={idx}>
-                      <PaginationLink
+              <div className="w-full">
+                <Pagination>
+                  <PaginationContent className="flex flex-wrap justify-center gap-1">
+                    <PaginationItem>
+                      <PaginationPrevious
                         href="#"
-                        isActive={page === idx + 1}
                         onClick={e => {
                           e.preventDefault();
-                          handlePageChange(idx + 1);
+                          handlePageChange(page - 1);
                         }}
-                      >
-                        {idx + 1}
-                      </PaginationLink>
+                        aria-disabled={page === 1}
+                        className={page === 1 ? 'pointer-events-none opacity-50' : ''}
+                      />
                     </PaginationItem>
-                  ))}
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      onClick={e => {
-                        e.preventDefault();
-                        handlePageChange(page + 1);
-                      }}
-                      aria-disabled={page === totalPages}
-                      className={page === totalPages ? 'pointer-events-none opacity-50' : ''}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+                    {getPaginationWindow(page, totalPages).map((p, idx) =>
+                      p === '...'
+                        ? <PaginationEllipsis key={"ellipsis-" + idx} />
+                        : (
+                          <PaginationItem key={p}>
+                            <PaginationLink
+                              href="#"
+                              isActive={page === p}
+                              onClick={e => {
+                                e.preventDefault();
+                                handlePageChange(Number(p));
+                              }}
+                            >
+                              {p}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={e => {
+                          e.preventDefault();
+                          handlePageChange(page + 1);
+                        }}
+                        aria-disabled={page === totalPages}
+                        className={page === totalPages ? 'pointer-events-none opacity-50' : ''}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+                {/* No scroll hint needed, pagination will wrap */}
+              </div>
             </div>
           )}
         </section>
