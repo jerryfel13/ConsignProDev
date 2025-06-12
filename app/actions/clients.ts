@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import axios from "axios";
 
-const API_BASE_URL = 'https://lwphsims-uat.up.railway.app';
+const API_BASE_URL = 'https://lwphsims-prod.up.railway.app';
 
 export async function getClients() {
   try {

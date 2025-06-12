@@ -55,7 +55,7 @@ export default function ProfilePage() {
       const updatedBy = localStorage.getItem("user_external_id");
       if (!token || !userExternalId || !updatedBy) throw new Error("Missing authentication or user ID.");
       // Use UAT base URL directly
-      const baseURL = "https://lwphsims-uat.up.railway.app";
+      const baseURL = "https://lwphsims-prod.up.railway.app";
       console.log("PUT URL:", `${baseURL}/users/${userExternalId}`);
       console.log("Payload:", {
         first_name: form.first_name,

@@ -47,7 +47,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddClientModal } from "./add-client-modal";
 import axios from "axios";
 
-const API_BASE_URL = 'https://lwphsims-uat.up.railway.app';
+const API_BASE_URL = 'https://lwphsims-prod.up.railway.app';
 
 // Utility function to format currency in PHP
 const formatCurrency = (amount: string | number) => {
