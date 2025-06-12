@@ -966,12 +966,14 @@ export default function ClientDetailPage({
                     <p className="text-muted-foreground mb-4">
                       No transactions found for this client
                     </p>
-                    <Button asChild>
-                      <Link href={`/transactions/new?clientId=${clientId}`}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Transaction
-                      </Link>
-                    </Button>
+                    <div className="flex gap-2 justify-center">
+                      <Button asChild>
+                        <Link href={`/sales/record-sales?clientId=${clientId}&from=clients`}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Transaction
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
                 )}
                 <div className="p-4 flex justify-end">

@@ -340,50 +340,50 @@ export default function AuditTrail() {
                 Showing {logs.length} of {totalNumber} logs
               </div>
               <div className="w-full">
-                <Pagination>
+              <Pagination>
                   <PaginationContent className="flex flex-wrap justify-center gap-1">
-                    <PaginationItem>
-                      <PaginationPrevious
-                        href="#"
-                        onClick={e => {
-                          e.preventDefault();
-                          handlePageChange(page - 1);
-                        }}
-                        aria-disabled={page === 1}
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={e => {
+                        e.preventDefault();
+                        handlePageChange(page - 1);
+                      }}
+                      aria-disabled={page === 1}
                         className={page === 1 ? 'pointer-events-none opacity-50' : ''}
-                      />
-                    </PaginationItem>
+                    />
+                  </PaginationItem>
                     {getPaginationWindow(page, totalPages).map((p, idx) =>
                       p === '...'
                         ? <PaginationEllipsis key={"ellipsis-" + idx} />
                         : (
                           <PaginationItem key={p}>
-                            <PaginationLink
-                              href="#"
-                              isActive={page === p}
-                              onClick={e => {
-                                e.preventDefault();
-                                handlePageChange(Number(p));
-                              }}
-                            >
-                              {p}
-                            </PaginationLink>
-                          </PaginationItem>
-                        )
-                    )}
-                    <PaginationItem>
-                      <PaginationNext
+                      <PaginationLink
                         href="#"
+                              isActive={page === p}
                         onClick={e => {
                           e.preventDefault();
-                          handlePageChange(page + 1);
+                                handlePageChange(Number(p));
                         }}
-                        aria-disabled={page === totalPages}
-                        className={page === totalPages ? 'pointer-events-none opacity-50' : ''}
-                      />
+                      >
+                              {p}
+                      </PaginationLink>
                     </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+                        )
+                    )}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={e => {
+                        e.preventDefault();
+                        handlePageChange(page + 1);
+                      }}
+                      aria-disabled={page === totalPages}
+                        className={page === totalPages ? 'pointer-events-none opacity-50' : ''}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
                 {/* No scroll hint needed, pagination will wrap */}
               </div>
             </div>

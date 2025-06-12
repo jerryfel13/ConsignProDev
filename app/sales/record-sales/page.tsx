@@ -406,10 +406,10 @@ function RecordSalesContent() {
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2">
           <Link 
-            href={fromPage === "clients" ? "/clients" : "/sales"} 
+            href={fromPage === "clients" ? `/clients/${clientId}` : "/sales"} 
             className="text-lg font-medium"
           >
-            ← Back to {fromPage === "clients" ? "Clients" : "Sales"}
+            ← Back to {fromPage === "clients" ? "Client Profile" : "Sales"}
           </Link>
         </div>
         <div className="flex gap-2 items-center">
