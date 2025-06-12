@@ -75,6 +75,29 @@ interface Client {
   totalValue: string;
 }
 
+interface ApiResponse {
+  status: {
+    success: boolean;
+    message: string;
+  };
+  data: Array<{
+    external_id: string;
+    first_name: string;
+    middle_name: string;
+    last_name: string;
+    email: string;
+    contact_no: string;
+    is_consignor: boolean;
+    is_active: boolean;
+  }>;
+  meta: {
+    page: number;
+    totalNumber: number;
+    totalPages: number;
+    displayPage: number;
+  };
+}
+
 interface ClientsTableProps {
   initialClients: Client[];
   error?: string;
@@ -92,6 +115,14 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
   const [retryCount, setRetryCount] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+  const [clients, setClients] = useState<Client[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Add retry effect
   useEffect(() => {
@@ -102,6 +133,62 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
       return () => clearTimeout(timer);
     }
   }, [error, retryCount]);
+
+  const fetchClients = async () => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const params = new URLSearchParams({
+        pageNumber: (pagination.pageIndex + 1).toString(),
+        displayPerPage: pagination.pageSize.toString(),
+        sortBy: "first_name",
+        orderBy: sorting[0]?.desc ? "desc" : "asc",
+      });
+
+      if (globalFilter) {
+        params.append("searchValue", globalFilter);
+      }
+
+      const statusFilter = columnFilters.find(f => f.id === "status")?.value;
+      if (statusFilter) {
+        params.append("isActive", statusFilter === "Active" ? "Y" : "N");
+      }
+
+      const response = await axios.get<ApiResponse>(`${API_BASE_URL}/clients?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (response.data.status.success) {
+        const formattedClients = response.data.data.map(client => ({
+          id: client.external_id,
+          name: `${client.first_name} ${client.last_name}`,
+          email: client.email,
+          phone: client.contact_no || "",
+          status: client.is_active ? "Active" : "Inactive",
+          isConsignor: client.is_consignor,
+          totalValue: "",
+        }));
+        setClients(formattedClients);
+        setTotalPages(response.data.meta.totalPages);
+        setTotalItems(response.data.meta.totalNumber);
+      }
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchClients();
+  }, [pagination.pageIndex, pagination.pageSize, sorting, globalFilter, columnFilters]);
 
   const handleDeleteClient = async (clientId: string) => {
     try {
@@ -325,25 +412,28 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
 ];
 
   const table = useReactTable({
-    data: initialClients,
+    data: clients,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
+    pageCount: totalPages,
     state: {
       sorting,
       columnFilters,
       rowSelection,
       globalFilter,
+      pagination,
     },
     globalFilterFn: (row, columnId, filterValue) => {
       const value = row.getValue(columnId)?.toString().toLowerCase() ?? "";
       return value.includes(filterValue.toLowerCase());
     },
+    manualPagination: true,
   });
 
   if (error) {
@@ -491,23 +581,55 @@ export function ClientsTable({ initialClients, error, loading = false, onAddClie
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 py-4">
             <div className="flex-1 text-sm text-muted-foreground text-center sm:text-left">
-              {table.getFilteredSelectedRowModel().rows.length} of{" "}
-              {table.getFilteredRowModel().rows.length} row(s) selected.
+              Showing {pagination.pageIndex * pagination.pageSize + 1} to{" "}
+              {Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalItems)} of{" "}
+              {totalItems} entries
             </div>
             <div className="flex items-center space-x-2">
+              <Select
+                value={pagination.pageSize.toString()}
+                onValueChange={(value) => {
+                  setPagination(prev => ({
+                    ...prev,
+                    pageSize: Number(value),
+                    pageIndex: 0,
+                  }));
+                }}
+              >
+                <SelectTrigger className="h-9 w-[70px]">
+                  <SelectValue placeholder={pagination.pageSize} />
+                </SelectTrigger>
+                <SelectContent side="top">
+                  {[10, 20, 30, 40, 50].map((pageSize) => (
+                    <SelectItem key={pageSize} value={pageSize.toString()}>
+                      {pageSize}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
+                onClick={() => {
+                  setPagination(prev => ({
+                    ...prev,
+                    pageIndex: prev.pageIndex - 1
+                  }));
+                }}
+                disabled={pagination.pageIndex === 0}
               >
                 Previous
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
+                onClick={() => {
+                  setPagination(prev => ({
+                    ...prev,
+                    pageIndex: prev.pageIndex + 1
+                  }));
+                }}
+                disabled={pagination.pageIndex >= totalPages - 1}
               >
                 Next
               </Button>
