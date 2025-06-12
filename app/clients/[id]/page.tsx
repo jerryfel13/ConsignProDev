@@ -973,6 +973,7 @@ export default function ClientDetailPage({
                           Add Transaction
                         </Link>
                       </Button>
+                      
                     </div>
                   </div>
                 )}
