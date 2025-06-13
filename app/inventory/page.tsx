@@ -443,8 +443,8 @@ export default function InventoryPage() {
                     <SelectContent>
                       <SelectItem value="name-asc">Name (A-Z)</SelectItem>
                       <SelectItem value="name-desc">Name (Z-A)</SelectItem>
-                      <SelectItem value="price-asc">Price (Low to High)</SelectItem>
-                      <SelectItem value="price-desc">Price (High to Low)</SelectItem>
+                      <SelectItem value="price-asc">Selling Price (Low to High)</SelectItem>
+                      <SelectItem value="price-desc">Selling Price (High to Low)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -459,7 +459,7 @@ export default function InventoryPage() {
                     <th className="p-2 sm:p-3 text-left align-middle w-[120px] font-semibold text-gray-700 border-b">Category</th>
                     <th className="p-2 sm:p-3 text-left align-middle w-[120px] font-semibold text-gray-700 border-b">Brand</th>
                     <th className="p-2 sm:p-3 text-left align-middle w-[80px] font-semibold text-gray-700 border-b">Stock</th>
-                    <th className="p-2 sm:p-3 text-left align-middle w-[110px] font-semibold text-gray-700 border-b">Price</th>
+                    <th className="p-2 sm:p-3 text-left align-middle w-[110px] font-semibold text-gray-700 border-b">Selling Price</th>
                     <th className="p-2 sm:p-3 text-left align-middle w-[110px] font-semibold text-gray-700 border-b">Consigned</th>
                     <th className="p-2 sm:p-3 text-left align-middle w-[160px] font-semibold text-gray-700 border-b">Actions</th>
                   </tr>

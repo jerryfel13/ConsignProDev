@@ -96,7 +96,7 @@ export default function ClientConsignmentsPage({
                       <th className="text-left py-3 px-2 md:px-4 font-medium text-muted-foreground">Name</th>
                       <th className="hidden md:table-cell text-left py-3 px-2 md:px-4 font-medium text-muted-foreground">Brand</th>
                       <th className="hidden md:table-cell text-left py-3 px-2 md:px-4 font-medium text-muted-foreground">Model</th>
-                      <th className="text-right py-3 px-2 md:px-4 font-medium text-muted-foreground">Price</th>
+                      <th className="text-right py-3 px-2 md:px-4 font-medium text-muted-foreground">Selling Price</th>
                       <th className="hidden sm:table-cell text-center py-3 px-2 md:px-4 font-medium text-muted-foreground">Stock</th>
                       <th className="hidden sm:table-cell text-center py-3 px-2 md:px-4 font-medium text-muted-foreground">Status</th>
                       <th className="text-right py-3 px-2 md:px-4 font-medium text-muted-foreground">Details</th>

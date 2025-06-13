@@ -521,7 +521,7 @@ export default function ItemDetailPage() {
                       <div className="font-semibold text-base mb-2">Pricing & Stock</div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
                         <div><span className="text-gray-500">Cost:</span> <span className="font-medium">₱{Number(product.cost).toLocaleString()}</span></div>
-                        <div><span className="text-gray-500">Price:</span> <span className="font-medium">₱{Number(product.price).toLocaleString()}</span></div>
+                        <div><span className="text-gray-500">Selling Price:</span> <span className="font-medium">₱{Number(product.price).toLocaleString()}</span></div>
                         <div><span className="text-gray-500">Consigned:</span> <span className="font-medium">{product.is_consigned ? "Yes" : "No"}</span></div>
                         <div><span className="text-gray-500">Stock:</span> <span className="font-medium">{product.stock.qty_in_stock}</span></div>
                         <div><span className="text-gray-500">Minimum Qty:</span> <span className="font-medium">{product.stock.min_qty}</span></div>
@@ -529,7 +529,7 @@ export default function ItemDetailPage() {
                         {product.is_consigned && product.consignor && (
                           <>
                             <div><span className="text-gray-500">Consignor:</span> <span className="font-medium">{product.consignor.first_name} {product.consignor.last_name}</span></div>
-                            <div><span className="text-gray-500">Consignor Price:</span> <span className="font-medium">₱{Number(product.consignor_selling_price).toLocaleString()}</span></div>
+                            <div><span className="text-gray-500">Consignor Selling Price:</span> <span className="font-medium">₱{Number(product.consignor_selling_price).toLocaleString()}</span></div>
                           </>
                         )}
                       </div>

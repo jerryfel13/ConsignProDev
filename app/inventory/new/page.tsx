@@ -97,7 +97,7 @@ const formSchema = z.object({
     qty_in_stock: z.coerce.number().min(0, "Quantity in stock must be a positive number"),
   }),
   cost: z.number().min(0, "Cost must be a positive number"),
-  price: z.number().min(0, "Price must be a positive number"),
+  price: z.number().min(0, "Selling Price must be a positive number"),
   is_consigned: z.boolean(),
   consignor_ext_id: z.string().optional(),
   consignor_selling_price: z.number().optional(),
@@ -396,7 +396,7 @@ function AddNewItemForm() {
         if (formErrors.brand_ext_id) missingFields.push("Brand");
         if (formErrors.name) missingFields.push("Name");
         if (formErrors.cost) missingFields.push("Cost");
-        if (formErrors.price) missingFields.push("Price");
+        if (formErrors.price) missingFields.push("Selling Price");
         if (formErrors.stock?.min_qty) missingFields.push("Minimum Quantity");
         if (formErrors.stock?.qty_in_stock) missingFields.push("Quantity in Stock");
         if (formErrors.condition?.interior) missingFields.push("Interior Condition");
@@ -565,7 +565,7 @@ function AddNewItemForm() {
       "name is required": "Please enter a product name",
       "name must be at least 2 characters": "Product name must be at least 2 characters long",
       "cost must be a positive number": "Please enter a valid cost amount",
-      "price must be a positive number": "Please enter a valid price amount",
+      "price must be a positive number": "Please enter a valid sellingprice amount",
       "stock.min_qty must be a positive number": "Please enter a valid minimum quantity",
       "stock.qty_in_stock must be a positive number": "Please enter a valid quantity in stock",
       "condition.interior is required": "Please enter the interior condition",

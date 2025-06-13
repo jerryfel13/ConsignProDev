@@ -337,7 +337,7 @@ export default function TransactionDetailPage({
 
         autoTable(doc, {
           startY: currentY,
-          head: [['Item', 'Code', 'Inclusions', 'Unit Price', 'Qty', 'Subtotal']],
+          head: [['Item', 'Code', 'Inclusions', 'Unit Selling Price', 'Qty', 'Subtotal']],
           body: items,
           theme: 'grid',
           headStyles: { fillColor: [34, 34, 34], textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -386,7 +386,7 @@ export default function TransactionDetailPage({
         // Totals
         if (sale.is_discounted) {
           doc.setFont("helvetica", "normal");
-          doc.text("Total Price:", 14, currentY);
+          doc.text("Total Seling Price:", 14, currentY);
           doc.text(`PHP ${sale.product.reduce((sum: number, item: any) => sum + Number(item.subtotal), 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}`, pageWidth - doc.getTextWidth(`PHP ${sale.product.reduce((sum: number, item: any) => sum + Number(item.subtotal), 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}`) - 14, currentY);
           
           currentY += 7;
@@ -479,7 +479,7 @@ export default function TransactionDetailPage({
                 <td style="text-align:right;font-size:13px;padding:2px 0;">${item.inclusions || '-'}</td>
               </tr>
               <tr>
-                <td style="font-size:13px;padding:2px 0;">Unit Price</td>
+                <td style="font-size:13px;padding:2px 0;">Unit Selling Price</td>
                 <td style="text-align:right;font-size:13px;padding:2px 0;">PHP ${Number(item.unit_price).toLocaleString('en-US', { minimumFractionDigits: 0 })}</td>
               </tr>
               <tr>
@@ -506,7 +506,7 @@ export default function TransactionDetailPage({
                 <td style="text-align:right;font-size:13px;padding:2px 0;">${sale?.product?.[0]?.inclusions || '-'}</td>
               </tr>
               <tr>
-                <td style="font-size:13px;padding:2px 0;">Unit Price</td>
+                <td style="font-size:13px;padding:2px 0;">Unit Selling Price</td>
                 <td style="text-align:right;font-size:13px;padding:2px 0;">PHP ${sale?.product?.[0]?.unit_price ? Number(sale.product[0].unit_price).toLocaleString('en-US', { minimumFractionDigits: 0 }) : ''}</td>
               </tr>
               <tr>
@@ -521,7 +521,7 @@ export default function TransactionDetailPage({
         
         ${sale?.is_discounted ? `
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <div style="font-size:14px;color:#666;">Total Price:</div>
+            <div style="font-size:14px;color:#666;">Total Selling Price:</div>
             <div style="font-size:14px;color:#666;text-decoration:line-through;">
               PHP ${sale.product.reduce((sum: number, item: any) => sum + Number(item.subtotal), 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}
             </div>
@@ -934,7 +934,7 @@ export default function TransactionDetailPage({
                               Quantity
                             </th>
                             <th className="text-right py-3 px-4 font-medium text-muted-foreground">
-                                Unit Price
+                                Unit Selling Price
                               </th>
                               <th className="text-right py-3 px-4 font-medium text-muted-foreground">
                                 Subtotal
@@ -970,7 +970,7 @@ export default function TransactionDetailPage({
                     {sale.is_discounted ? (
                       <>
                         <div className="flex flex-col">
-                          <span className="font-bold">Total Price:</span>
+                          <span className="font-bold">Total Selling Price:</span>
                           <span className="font-bold text-green-700 mt-1">Total Discounted Price:</span>
                         </div>
                         <div className="flex flex-col text-right">

@@ -114,7 +114,7 @@ export default function StockAnalysisPage() {
       );
       autoTable(doc, {
         startY: 34,
-        head: [["Item name", "Minimum Stock", "Available Stock", "Quantity Sold", "Unit price"]],
+        head: [["Item name", "Minimum Stock", "Available Stock", "Quantity Sold", "Unit Selling price"]],
         body: results.map(item => [
           item.name,
           item.stock?.min_qty ?? '-',
@@ -186,7 +186,7 @@ export default function StockAnalysisPage() {
                   <th className="px-4 py-2 text-left font-semibold">Minimum Stock</th>
                   <th className="px-4 py-2 text-left font-semibold">Available Stock</th>
                   <th className="px-4 py-2 text-left font-semibold">Quantity Sold</th>
-                  <th className="px-4 py-2 text-left font-semibold">Unit price</th>
+                  <th className="px-4 py-2 text-left font-semibold">Unit Selling price</th>
                 </tr>
               </thead>
               <tbody>

@@ -931,7 +931,7 @@ export default function EditProductPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="price">Price</Label>
+                <Label htmlFor="price">Selling Price</Label>
                 <Input
                   id="price"
                   name="price"
@@ -1064,7 +1064,7 @@ export default function EditProductPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="consignor_selling_price">Consignor Price</Label>
+                  <Label htmlFor="consignor_selling_price">Consignor Selling Price</Label>
                   <Input
                     id="consignor_selling_price"
                     name="consignor_selling_price"

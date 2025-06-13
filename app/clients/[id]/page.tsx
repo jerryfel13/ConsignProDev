@@ -815,7 +815,7 @@ export default function ClientDetailPage({
                           <th className="text-left py-3 px-4 font-medium text-muted-foreground">Code</th>
                           <th className="text-left py-3 px-4 font-medium text-muted-foreground">Item</th>
                           <th className="text-left py-3 px-4 font-medium text-muted-foreground">Date</th>
-                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">Price</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">Selling Price</th>
                           <th className="text-center py-3 px-4 font-medium text-muted-foreground">Status</th>
                           <th className="text-right py-3 px-4 font-medium text-muted-foreground">Actions</th>
                         </tr>

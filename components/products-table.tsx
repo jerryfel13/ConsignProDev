@@ -115,7 +115,7 @@ export function ProductsTable() {
             <TableHead>Brand</TableHead>
             <TableHead>Model</TableHead>
             <TableHead>Condition</TableHead>
-            <TableHead>Price</TableHead>
+            <TableHead>Selling Price</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Created</TableHead>
             <TableHead className="w-12"></TableHead>
