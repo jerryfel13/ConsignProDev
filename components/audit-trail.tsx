@@ -157,17 +157,24 @@ export default function AuditTrail() {
         pageNumber: page,
         displayPerPage: PAGE_SIZE,
       };
-      if (module && module !== "All") {
-        params.module = module;
-        if (selectedUserId) {
-          const selectedUser = users.find(u => u.id.toString() === selectedUserId);
-          if (selectedUser) params.userExternalId = selectedUser.external_id;
+
+      // If user is selected, only include userExternalId
+      if (selectedUserId) {
+        const selectedUser = users.find(u => u.id.toString() === selectedUserId);
+        if (selectedUser) {
+          params.userExternalId = selectedUser.external_id;
+        }
+      } else {
+        // Only include module and date filters if no user is selected
+        if (module && module !== "All") {
+          params.module = module;
+        }
+        if (dateFrom && dateTo) {
+          params.dateFrom = dayjs(dateFrom).format("YYYY-MM-DD");
+          params.dateTo = dayjs(dateTo).format("YYYY-MM-DD");
         }
       }
-      if (dateFrom && dateTo) {
-        params.dateFrom = dayjs(dateFrom).format("YYYY-MM-DD");
-        params.dateTo = dayjs(dateTo).format("YYYY-MM-DD");
-      }
+
       const res = await axios.get("https://lwphsims-uat.up.railway.app/logs/activity", { params });
       if (res.data.status.success) {
         setLogs(res.data.data);

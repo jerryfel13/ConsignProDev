@@ -99,6 +99,16 @@ export default function EditClientPage() {
         setSaving(false);
         return;
       }
+      if (!client?.contact_no) {
+        setShowResultPrompt({ success: false, message: "Phone number is required." });
+        setSaving(false);
+        return;
+      }
+      if (!client?.instagram) {
+        setShowResultPrompt({ success: false, message: "Instagram username is required." });
+        setSaving(false);
+        return;
+      }
       if (client?.is_consignor && !client.bank) {
         setShowResultPrompt({ success: false, message: "Bank information is required for consignors." });
         setSaving(false);
@@ -244,7 +254,6 @@ export default function EditClientPage() {
                   type="email"
                   value={client.email ?? ''}
                   onChange={(e) => setClient({ ...client, email: e.target.value })}
-                  required
                 />
               </div>
               <div className="space-y-2">
@@ -253,6 +262,7 @@ export default function EditClientPage() {
                   id="contact_no"
                   value={client.contact_no ?? ''}
                   onChange={(e) => setClient({ ...client, contact_no: e.target.value })}
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -290,6 +300,25 @@ export default function EditClientPage() {
                   id="address"
                   value={client.address || ''}
                   onChange={(e) => setClient({ ...client, address: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="instagram">Instagram</Label>
+                <Input
+                  id="instagram"
+                  value={client.instagram ?? ''}
+                  onChange={(e) => setClient({ ...client, instagram: e.target.value })}
+                  placeholder="username without @"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="facebook">Facebook</Label>
+                <Input
+                  id="facebook"
+                  value={client.facebook ?? ''}
+                  onChange={(e) => setClient({ ...client, facebook: e.target.value })}
+                  placeholder="Facebook username or profile URL"
                 />
               </div>
               {client.is_consignor && (

@@ -670,31 +670,47 @@ export default function ClientDetailPage({
                   <span>{getField('address', 'No address provided')}</span>
                 </div>
 
-                {getField('instagram') && (
-                  <div className="flex items-center p-2 rounded hover:bg-muted transition-colors">
-                    <Instagram className="h-5 w-5 mr-3 text-primary" />
+                <div className="flex items-center p-2 rounded hover:bg-muted transition-colors">
+                  <Instagram className="h-5 w-5 mr-3 text-primary" />
+                  {getField('instagram') ? (
                     <a
                       href={`https://instagram.com/${getField('instagram')}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      className="text-primary hover:underline"
                     >
-                      @{getField('instagram')}
+                      {getField('instagram')
+                        .replace(/^https?:\/\//, '')
+                        .replace(/^www\./, '')}
                     </a>
-                  </div>
-                )}
+                  ) : (
+                    <span className="text-muted-foreground">No Instagram provided</span>
+                  )}
+                </div>
 
-                {getField('facebook') && (
-                  <div className="flex items-center p-2 rounded hover:bg-muted transition-colors">
-                    <Facebook className="h-5 w-5 mr-3 text-primary" />
+                <div className="flex items-center p-2 rounded hover:bg-muted transition-colors">
+                  <Facebook className="h-5 w-5 mr-3 text-primary" />
+                  {getField('facebook') ? (
                     <a
-                      href={`https://facebook.com/${getField('facebook')}`}
+                      href={
+                        getField('facebook').startsWith('http')
+                          ? getField('facebook')
+                          : getField('facebook').startsWith('www')
+                            ? `https://${getField('facebook')}`
+                            : `https://facebook.com/${getField('facebook')}`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
+                      className="text-primary hover:underline"
                     >
-                      {getField('facebook')}
+                      {getField('facebook')
+                        .replace(/^https?:\/\//, '')
+                        .replace(/^www\./, '')}
                     </a>
-                  </div>
-                )}
+                  ) : (
+                    <span className="text-muted-foreground">No Facebook provided</span>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
