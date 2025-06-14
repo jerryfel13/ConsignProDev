@@ -106,7 +106,6 @@ export default function InventoryPage() {
     category: "all",
     brand: "all",
     outOfStock: false,
-    lowStock: false,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -130,7 +129,6 @@ export default function InventoryPage() {
   // Add new state for stock status counts
   const [stockStatusCounts, setStockStatusCounts] = useState({
     outOfStock: 0,
-    lowStock: 0
   });
 
   // Fetch categories and brands
@@ -176,9 +174,6 @@ export default function InventoryPage() {
         if (filters.outOfStock) {
           params.isOutOfStock = 'y';
         }
-        if (filters.lowStock) {
-          params.isLowStock = 'y';
-        }
         if (filters.category && filters.category !== "all") {
           params.category_ext_id = filters.category;
         }
@@ -222,25 +217,16 @@ export default function InventoryPage() {
     const fetchStockStatusCounts = async () => {
       try {
         // Only fetch if the respective card is visible or hasn't been fetched yet
-        const [outOfStockResponse, lowStockResponse] = await Promise.all([
-          axios.get("https://lwphsims-uat.up.railway.app/products", { 
-            params: { 
-              isOutOfStock: 'y',
-              displayPerPage: 1 // We only need the count
-            } 
-          }),
-          axios.get("https://lwphsims-uat.up.railway.app/products", { 
-            params: { 
-              isLowStock: 'y',
-              displayPerPage: 1 // We only need the count
-            } 
-          })
-        ]);
+        const outOfStockResponse = await axios.get("https://lwphsims-uat.up.railway.app/products", { 
+          params: { 
+            isOutOfStock: 'y',
+            displayPerPage: 1 // We only need the count
+          } 
+        });
 
-        if (outOfStockResponse.data.status.success && lowStockResponse.data.status.success) {
+        if (outOfStockResponse.data.status.success) {
           setStockStatusCounts({
-            outOfStock: outOfStockResponse.data.meta.totalNumber,
-            lowStock: lowStockResponse.data.meta.totalNumber
+            outOfStock: outOfStockResponse.data.meta.totalNumber
           });
         }
       } catch (error) {
@@ -336,11 +322,7 @@ export default function InventoryPage() {
 
   // Update the card click handlers
   const handleOutOfStockClick = () => {
-    setFilters(f => ({ ...f, outOfStock: !f.outOfStock, lowStock: false }));
-  };
-
-  const handleLowStockClick = () => {
-    setFilters(f => ({ ...f, lowStock: !f.lowStock, outOfStock: false }));
+    setFilters(f => ({ ...f, outOfStock: !f.outOfStock }));
   };
 
   return (
@@ -387,18 +369,6 @@ export default function InventoryPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stockStatusCounts.outOfStock}</div>
-            </CardContent>
-          </Card>
-          <Card
-            onClick={() => setFilters(f => ({ ...f, lowStock: !f.lowStock, outOfStock: false }))}
-            className={`cursor-pointer transition-shadow ${filters.lowStock ? 'ring-2 ring-yellow-500 shadow-lg' : ''}`}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Low in stock</CardTitle>
-              <TrendingDown className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stockStatusCounts.lowStock}</div>
             </CardContent>
           </Card>
         </div>

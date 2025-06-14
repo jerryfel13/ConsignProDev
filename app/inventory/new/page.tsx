@@ -90,7 +90,6 @@ const formSchema = z.object({
     interior: z.string().min(1, "Please enter interior condition"),
     exterior: z.string().min(1, "Please enter exterior condition"),
     overall: z.string().min(1, "Please enter overall condition"),
-    description: z.string().min(1, "Please enter a condition description"),
   }),
   stock: z.object({
     min_qty: z.preprocess(
@@ -351,7 +350,6 @@ function AddNewItemForm() {
         interior: "1",
         exterior: "1",
         overall: "1",
-        description: "",
       },
       stock: {
         min_qty: 0,
@@ -408,7 +406,6 @@ function AddNewItemForm() {
         if (formErrors.condition?.interior) missingFields.push("Interior Condition");
         if (formErrors.condition?.exterior) missingFields.push("Exterior Condition");
         if (formErrors.condition?.overall) missingFields.push("Overall Condition");
-        if (formErrors.condition?.description) missingFields.push("Condition Description");
 
         // Create error message
         const errorMessage = missingFields.length > 0
@@ -488,7 +485,6 @@ function AddNewItemForm() {
           interior: String(data.condition.interior),
           exterior: String(data.condition.exterior),
           overall: String(data.condition.overall),
-          description: data.condition.description || ""
         },
         stock: stockData,
         cost: data.cost,
@@ -577,7 +573,6 @@ function AddNewItemForm() {
       "condition.interior is required": "Please enter the interior condition",
       "condition.exterior is required": "Please enter the exterior condition",
       "condition.overall is required": "Please enter the overall condition",
-      "condition.description is required": "Please enter a condition description",
       "created_by is required": "System error: User information missing",
       "Invalid file type": "Please upload only JPG, PNG, or WebP images",
       "File size exceeds limit": "Image size must be less than 5MB",
@@ -1064,27 +1059,6 @@ function AddNewItemForm() {
                       </FormItem>
                     )}
                   />
-
-                  <FormField
-                    control={form.control}
-                    name="condition.description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1">
-                          Description
-                          <span className="text-red-500">*</span>
-                        </FormLabel>
-                            <FormControl>
-                          <Textarea 
-                            {...field} 
-                            className={form.formState.errors.condition?.description ? "border-red-500" : ""}
-                            placeholder="Enter condition description"
-                          />
-                            </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
 
                     <FormField
                       control={form.control}
