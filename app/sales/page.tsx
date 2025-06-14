@@ -34,7 +34,7 @@ const TABS = [
   { label: "Cancelled", value: "cancelled", endpoint: "/sales/cancelled" },
 ];
 
-const API_BASE = "https://lwphsims-uat.up.railway.app";
+const API_BASE = "https://lwphsims-prod.up.railway.app";
 
 const TAB_ICONS: Record<string, React.ReactNode> = {
   all: <Receipt className="h-5 w-5 text-muted-foreground" />,

@@ -40,7 +40,7 @@ export function ProductBrandModal({
 
     try {
       const response = await axios.post(
-        "https://lwphsims-uat.up.railway.app/products/brands",
+        "https://lwphsims-prod.up.railway.app/products/brands",
         {
           name: brandName,
           created_by: userExternalId,

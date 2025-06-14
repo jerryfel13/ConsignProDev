@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const API_BASE_URL = "https://lwphsims-uat.up.railway.app";
+const API_BASE_URL = "https://lwphsims-prod.up.railway.app";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");

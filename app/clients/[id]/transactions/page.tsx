@@ -27,7 +27,7 @@ export default function ClientTransactionsPage({
     if (!clientId) return;
     setLoading(true);
     axios
-      .get(`https://lwphsims-uat.up.railway.app/sales/client/${clientId}/transactions`, {
+      .get(`https://lwphsims-prod.up.railway.app/sales/client/${clientId}/transactions`, {
         params: {
           pageNumber: currentPage,
           displayPerPage,

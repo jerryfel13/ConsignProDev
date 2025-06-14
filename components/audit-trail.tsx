@@ -110,7 +110,7 @@ export default function AuditTrail() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await axios.get("https://lwphsims-uat.up.railway.app/users", {
+        const res = await axios.get("https://lwphsims-prod.up.railway.app/users", {
           params: {
             isActive: "Y",
             pageNumber: 1,
@@ -175,7 +175,7 @@ export default function AuditTrail() {
         }
       }
 
-      const res = await axios.get("https://lwphsims-uat.up.railway.app/logs/activity", { params });
+      const res = await axios.get("https://lwphsims-prod.up.railway.app/logs/activity", { params });
       if (res.data.status.success) {
         setLogs(res.data.data);
         setTotalPages(res.data.meta.totalPages);

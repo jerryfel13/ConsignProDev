@@ -31,7 +31,7 @@ export default function UserDetailsPage() {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get(`https://lwphsims-uat.up.railway.app/users/${userId}`);
+        const response = await axios.get(`https://lwphsims-prod.up.railway.app/users/${userId}`);
         if (response.data.status?.success) {
           setUser(response.data.data);
           setForm({
@@ -78,7 +78,7 @@ export default function UserDetailsPage() {
         updated_by: updatedBy
       };
       const userRes = await axios.put(
-        `https://lwphsims-uat.up.railway.app/users/${userId}`,
+        `https://lwphsims-prod.up.railway.app/users/${userId}`,
         payload,
         {
           headers: {
@@ -95,7 +95,7 @@ export default function UserDetailsPage() {
           updated_by: updatedBy
         };
         roleRes = await axios.put(
-          `https://lwphsims-uat.up.railway.app/users/update-role/${userId}`,
+          `https://lwphsims-prod.up.railway.app/users/update-role/${userId}`,
           rolePayload,
           {
             headers: {
@@ -127,7 +127,7 @@ export default function UserDetailsPage() {
     try {
       const token = localStorage.getItem("token");
       if (!token || !loggedInExternalId) throw new Error("Missing authentication or user ID.");
-      const response = await axios.delete(`https://lwphsims-uat.up.railway.app/users/${userId}`, {
+      const response = await axios.delete(`https://lwphsims-prod.up.railway.app/users/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",

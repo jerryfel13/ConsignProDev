@@ -139,7 +139,7 @@ function RecordSalesContent() {
         });
 
         // Fetch products
-        const productsResponse =  await axios.get("https://lwphsims-uat.up.railway.app/products", {
+        const productsResponse =  await axios.get("https://lwphsims-prod.up.railway.app/products", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -307,7 +307,7 @@ function RecordSalesContent() {
       }
 
       const response = await axios.post(
-        'https://lwphsims-uat.up.railway.app/sales',
+        'https://lwphsims-prod.up.railway.app/sales',
         saleData,
         {
           headers: {
