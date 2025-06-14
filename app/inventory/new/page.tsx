@@ -80,7 +80,7 @@ const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   material: z.string().optional(),
   hardware: z.string().optional(),
-  code: z.string().optional(),
+  code: z.string().min(1, "Code is required"),
   measurement: z.string().optional(),
   model: z.string().optional(),
   auth_ext_id: z.string().optional(),
@@ -93,8 +93,14 @@ const formSchema = z.object({
     description: z.string().min(1, "Please enter a condition description"),
   }),
   stock: z.object({
-    min_qty: z.coerce.number().min(0, "Minimum quantity must be a positive number"),
-    qty_in_stock: z.coerce.number().min(0, "Quantity in stock must be a positive number"),
+    min_qty: z.preprocess(
+      (val) => val === '' ? undefined : Number(val),
+      z.number().min(0, "Minimum quantity must be a positive number")
+    ),
+    qty_in_stock: z.preprocess(
+      (val) => val === '' ? undefined : Number(val),
+      z.number().min(0, "Quantity in stock must be a positive number")
+    ),
   }),
   cost: z.number().min(0, "Cost must be a positive number"),
   price: z.number().min(0, "Selling Price must be a positive number"),
@@ -945,9 +951,16 @@ function AddNewItemForm() {
                       name="code"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Code</FormLabel>
+                          <FormLabel className="flex items-center gap-1">
+                            Code
+                            <span className="text-red-500">*</span>
+                          </FormLabel>
                           <FormControl>
-                            <Input {...field} maxLength={100} />
+                            <Input 
+                              {...field} 
+                              maxLength={100}
+                              className={form.formState.errors.code ? "border-red-500" : ""}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -998,24 +1011,13 @@ function AddNewItemForm() {
                           Interior Condition
                           <span className="text-red-500">*</span>
                         </FormLabel>
-                        <div className="space-y-1">
-                          <Input
-                            id="interior"
-                            type="number"
-                            min="1"
-                            max="10"
-                            value={field.value}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
-                                field.onChange(value);
-                              }
-                            }}
-                            placeholder="Enter value from 1-10"
+                        <FormControl>
+                          <Textarea 
+                            {...field} 
+                            placeholder="Enter interior condition"
                             className={form.formState.errors.condition?.interior ? "border-red-500" : ""}
                           />
-                          <p className="text-xs text-gray-500">Enter a value between 1 and 10</p>
-                        </div>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1030,24 +1032,13 @@ function AddNewItemForm() {
                           Exterior Condition
                           <span className="text-red-500">*</span>
                         </FormLabel>
-                        <div className="space-y-1">
-                          <Input
-                            id="exterior"
-                            type="number"
-                            min="1"
-                            max="10"
-                            value={field.value}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
-                                field.onChange(value);
-                              }
-                            }}
-                            placeholder="Enter value from 1-10"
+                        <FormControl>
+                          <Textarea 
+                            {...field} 
+                            placeholder="Enter exterior condition"
                             className={form.formState.errors.condition?.exterior ? "border-red-500" : ""}
                           />
-                          <p className="text-xs text-gray-500">Enter a value between 1 and 10</p>
-                        </div>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1062,24 +1053,13 @@ function AddNewItemForm() {
                           Overall Condition
                           <span className="text-red-500">*</span>
                         </FormLabel>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            id="overall"
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={field.value}
-                            onChange={e => {
-                              const value = e.target.value;
-                              if (value === '' || (Number(value) >= 0 && Number(value) <= 100)) {
-                                field.onChange(value);
-                              }
-                            }}
+                        <FormControl>
+                          <Textarea 
+                            {...field} 
                             placeholder="Enter overall condition"
                             className={form.formState.errors.condition?.overall ? "border-red-500" : ""}
                           />
-                          <span className="text-gray-500 font-medium">%</span>
-                        </div>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1135,7 +1115,7 @@ function AddNewItemForm() {
                       render={({ field }) => (
                         <FormItem>
                         <FormLabel className="flex items-center gap-1">
-                          Price
+                          Selling Price
                           <span className="text-red-500">*</span>
                         </FormLabel>
                           <FormControl>
@@ -1231,36 +1211,6 @@ function AddNewItemForm() {
 
                     <FormField
                       control={form.control}
-                      name="stock.min_qty"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-1">
-                            Minimum Quantity
-                            <span className="text-red-500">*</span>
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              min={0}
-                              step="1"
-                              {...field} 
-                              onChange={(e) => {
-                                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                                field.onChange(value);
-                              }}
-                              className={form.formState.errors.stock?.min_qty ? "border-red-500" : ""}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            The minimum quantity that should be maintained in stock
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
                       name="stock.qty_in_stock"
                       render={({ field }) => (
                         <FormItem>
@@ -1273,10 +1223,11 @@ function AddNewItemForm() {
                               type="number" 
                               min={0}
                               step="1"
-                              {...field}
-                              onChange={(e) => {
-                                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                                field.onChange(value);
+                              onChange={e => {
+                                const val = e.target.value;
+                                // Only allow numbers, default to 0 if empty or invalid
+                                const num = Number(val);
+                                field.onChange(isNaN(num) ? 0 : num);
                               }}
                               className={form.formState.errors.stock?.qty_in_stock ? "border-red-500" : ""}
                             />

@@ -456,6 +456,7 @@ export default function InventoryPage() {
                 <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
                     <th className="p-2 sm:p-3 text-left align-middle w-[220px] font-semibold text-gray-700 border-b">Name</th>
+                    <th className="p-2 sm:p-3 text-left align-middle w-[100px] font-semibold text-gray-700 border-b">Code</th>
                     <th className="p-2 sm:p-3 text-left align-middle w-[120px] font-semibold text-gray-700 border-b">Category</th>
                     <th className="p-2 sm:p-3 text-left align-middle w-[120px] font-semibold text-gray-700 border-b">Brand</th>
                     <th className="p-2 sm:p-3 text-left align-middle w-[80px] font-semibold text-gray-700 border-b">Stock</th>
@@ -488,6 +489,7 @@ export default function InventoryPage() {
                         }
                       >
                         <td className="p-2 sm:p-3 text-left align-middle w-[220px] truncate max-w-[200px]">{product.name}</td>
+                        <td className="p-2 sm:p-3 text-left align-middle w-[100px] truncate max-w-[80px]">{product.code}</td>
                         <td className="p-2 sm:p-3 text-left align-middle w-[120px] truncate max-w-[100px]">{product.category.name}</td>
                         <td className="p-2 sm:p-3 text-left align-middle w-[120px] truncate max-w-[100px]">{product.brand.name}</td>
                         <td className="p-2 sm:p-3 text-left align-middle w-[80px]">{product.stock.qty_in_stock}</td>
