@@ -116,8 +116,8 @@ export default function InventoryPage() {
     displayPage: 10,
   });
   const [sortConfig, setSortConfig] = useState({
-    sortBy: "name",
-    orderBy: "asc"
+    sortBy: "created_at",
+    orderBy: "desc"
   });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -411,6 +411,7 @@ export default function InventoryPage() {
                       <SelectValue placeholder="Sort By" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="created_at-desc">Newest First</SelectItem>
                       <SelectItem value="name-asc">Name (A-Z)</SelectItem>
                       <SelectItem value="name-desc">Name (Z-A)</SelectItem>
                       <SelectItem value="price-asc">Selling Price (Low to High)</SelectItem>
@@ -501,7 +502,11 @@ export default function InventoryPage() {
 
             <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-sm text-gray-500 text-center sm:text-left">
-                Showing {((pagination.page - 1) * pagination.displayPage) + 1} to {Math.min(pagination.page * pagination.displayPage, pagination.totalNumber)} of {pagination.totalNumber} items
+                {pagination.totalNumber > 0 ? (
+                  `Showing ${((pagination.page - 1) * pagination.displayPage) + 1} to ${Math.min(pagination.page * pagination.displayPage, pagination.totalNumber)} of ${pagination.totalNumber} items`
+                ) : (
+                  "No items to display"
+                )}
               </div>
               <div className="w-full">
                 <Pagination>
@@ -542,8 +547,8 @@ export default function InventoryPage() {
                           e.preventDefault();
                           setPagination(p => ({ ...p, page: Math.min(p.totalPages, p.page + 1) }));
                         }}
-                        aria-disabled={pagination.page === pagination.totalPages}
-                        className={pagination.page === pagination.totalPages ? 'pointer-events-none opacity-50' : ''}
+                        aria-disabled={pagination.page === pagination.totalPages || pagination.totalNumber === 0}
+                        className={pagination.page === pagination.totalPages || pagination.totalNumber === 0 ? 'pointer-events-none opacity-50' : ''}
                       />
                     </PaginationItem>
                   </PaginationContent>
