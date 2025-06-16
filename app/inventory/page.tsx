@@ -116,8 +116,8 @@ export default function InventoryPage() {
     displayPage: 10,
   });
   const [sortConfig, setSortConfig] = useState({
-    sortBy: "name",
-    orderBy: "asc"
+    sortBy: "created_at",
+    orderBy: "desc"
   });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
