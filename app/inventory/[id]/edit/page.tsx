@@ -53,7 +53,6 @@ type Product = {
     interior: string;
     exterior: string;
     overall: string;
-    description: string;
   } | null;
   cost: string;
   price: string;
@@ -101,7 +100,6 @@ type FormData = {
     interior: string;
     exterior: string;
     overall: string;
-    description: string;
   };
 
   // Pricing
@@ -150,7 +148,6 @@ export default function EditProductPage() {
       interior: "",
       exterior: "",
       overall: "",
-      description: "",
     },
     cost: 0,
     price: 0,
@@ -253,7 +250,6 @@ export default function EditProductPage() {
               interior: productData.condition?.interior || "10",
               exterior: productData.condition?.exterior || "10",
               overall: productData.condition?.overall || "100",
-              description: productData.condition?.description || ""
             },
             cost: Number(productData.cost),
             price: Number(productData.price),
@@ -282,7 +278,6 @@ export default function EditProductPage() {
               interior: productData.condition?.interior,
               exterior: productData.condition?.exterior,
               overall: productData.condition?.overall,
-              description: productData.condition?.description
             }
           });
         } else {
@@ -390,7 +385,6 @@ export default function EditProductPage() {
           interior: String(formData.condition.interior),
           exterior: String(formData.condition.exterior),
           overall: String(formData.condition.overall),
-          description: formData.condition.description || ""
         },
 
         // Pricing
@@ -953,19 +947,11 @@ export default function EditProductPage() {
                 <div className="space-y-1">
                   <Input
                     id="interior"
-                    type="number"
-                    min="1"
-                    max="10"
+                    type="text"
                     value={formData.condition.interior || ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
-                        handleConditionChange('interior', value);
-                      }
-                    }}
-                    placeholder="Enter value from 1-10"
+                    onChange={(e) => handleConditionChange('interior', e.target.value)}
+                    placeholder="Enter interior condition"
                   />
-                  <p className="text-xs text-gray-500">Enter a value between 1 and 10</p>
                 </div>
               </div>
 
@@ -974,58 +960,25 @@ export default function EditProductPage() {
                 <div className="space-y-1">
                   <Input
                     id="exterior"
-                    type="number"
-                    min="1"
-                    max="10"
+                    type="text"
                     value={formData.condition.exterior || ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
-                        handleConditionChange('exterior', value);
-                      }
-                    }}
-                    placeholder="Enter value from 1-10"
+                    onChange={(e) => handleConditionChange('exterior', e.target.value)}
+                    placeholder="Enter exterior condition"
                   />
-                  <p className="text-xs text-gray-500">Enter a value between 1 and 10</p>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="overall">Overall Condition</Label>
-                <div className="flex items-center gap-2">
+                <div className="space-y-1">
                   <Input
                     id="overall"
-                    type="number"
-                    min="0"
-                    max="100"
+                    type="text"
                     value={formData.condition.overall || ""}
-                    onChange={e => {
-                      const value = e.target.value;
-                      if (value === '' || (Number(value) >= 0 && Number(value) <= 100)) {
-                        setFormData(prev => ({
-                          ...prev,
-                          condition: {
-                            ...prev.condition,
-                            overall: value
-                          }
-                        }));
-                      }
-                    }}
+                    onChange={(e) => handleConditionChange('overall', e.target.value)}
                     placeholder="Enter overall condition"
                   />
-                  <span className="text-gray-500 font-medium">%</span>
                 </div>
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="description">Condition Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.condition.description}
-                  onChange={(e) => handleConditionChange('description', e.target.value)}
-                  placeholder="Add any additional details about the item's condition..."
-                />
               </div>
             </div>
           </div>
