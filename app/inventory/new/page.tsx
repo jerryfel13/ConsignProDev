@@ -1059,7 +1059,7 @@ function AddNewItemForm() {
                       </FormItem>
                     )}
                   />
-
+                  
                     <FormField
                       control={form.control}
                       name="cost"
